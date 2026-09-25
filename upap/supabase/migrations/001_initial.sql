@@ -1,10 +1,7 @@
--- ==========================================================
 -- UPAP — Universal Professions AI Platform
 -- مخطط قاعدة البيانات الكاملة v1
 -- الصق هذا الملف في Supabase → SQL Editor → Run
--- ==========================================================
 
--- ── 1. جدول الدول ─────────────────────────────────────────
 create table if not exists countries (
   code text primary key,                -- US, SA, SY, AE...
   name_ar text not null,
@@ -27,7 +24,6 @@ create table if not exists countries (
   created_at timestamptz default now()
 );
 
--- ── 2. جدول المهن ─────────────────────────────────────────
 create table if not exists professions (
   id uuid primary key default gen_random_uuid(),
   slug text unique not null,            -- accounting, law, medicine...
@@ -41,7 +37,6 @@ create table if not exists professions (
   created_at timestamptz default now()
 );
 
--- ── 3. جدول الوكلاء ───────────────────────────────────────
 create table if not exists agents (
   id text primary key,                  -- profession.type: accounting.invoice-reader
   profession_id uuid references professions(id) on delete restrict,
@@ -61,7 +56,6 @@ create table if not exists agents (
   updated_at timestamptz default now()
 );
 
--- ── 4. جدول العملاء ───────────────────────────────────────
 create table if not exists clients (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete cascade,
@@ -78,7 +72,6 @@ create table if not exists clients (
   updated_at timestamptz default now()
 );
 
--- ── 5. جدول الطلبات ───────────────────────────────────────
 create table if not exists requests (
   id uuid primary key default gen_random_uuid(),
   agent_id text references agents(id) on delete restrict,
@@ -99,7 +92,6 @@ create table if not exists requests (
   updated_at timestamptz default now()
 );
 
--- ── 6. جدول بيانات التدريب (الخندق الدفاعي) ─────────────
 create table if not exists training_data (
   id uuid primary key default gen_random_uuid(),
   agent_id text references agents(id) on delete cascade,
@@ -115,7 +107,6 @@ create table if not exists training_data (
   created_at timestamptz default now()
 );
 
--- ── 7. سجل المراجعة (Audit Log) ──────────────────────────
 create table if not exists audit_log (
   id uuid primary key default gen_random_uuid(),
   actor_id text,                        -- client_id أو "system"
@@ -130,7 +121,6 @@ create table if not exists audit_log (
   created_at timestamptz default now()
 );
 
--- ── 8. جدول فحوصات الامتثال ──────────────────────────────
 create table if not exists compliance_checks (
   id uuid primary key default gen_random_uuid(),
   request_id uuid references requests(id) on delete cascade,
@@ -141,7 +131,6 @@ create table if not exists compliance_checks (
   created_at timestamptz default now()
 );
 
--- ── 9. جدول الاشتراكات ────────────────────────────────────
 create table if not exists subscriptions (
   id uuid primary key default gen_random_uuid(),
   client_id uuid references clients(id) on delete cascade,
@@ -156,9 +145,7 @@ create table if not exists subscriptions (
   created_at timestamptz default now()
 );
 
--- ==========================================================
 -- فهارس الأداء
--- ==========================================================
 create index if not exists idx_requests_client on requests(client_id);
 create index if not exists idx_requests_agent on requests(agent_id);
 create index if not exists idx_requests_status on requests(status);
@@ -170,9 +157,7 @@ create index if not exists idx_audit_created on audit_log(created_at desc);
 create index if not exists idx_training_agent on training_data(agent_id, country, language);
 create index if not exists idx_subscriptions_client on subscriptions(client_id, status);
 
--- ==========================================================
 -- Row Level Security (عزل تام بين العملاء)
--- ==========================================================
 alter table requests enable row level security;
 alter table clients enable row level security;
 alter table subscriptions enable row level security;
@@ -197,9 +182,7 @@ create policy "clients_own_subscriptions"
     client_id in (select id from clients where user_id = auth.uid())
   );
 
--- ==========================================================
 -- البيانات الأولية — المهن الأساسية
--- ==========================================================
 insert into professions (slug, name_ar, name_en, icon, color, is_active) values
   ('accounting',   'محاسبة',              'Accounting',      '📊', '#2F5D45', true),
   ('law',          'محاماة وقانون',        'Law',             '⚖️', '#14213D', true),
@@ -223,7 +206,6 @@ insert into professions (slug, name_ar, name_en, icon, color, is_active) values
   ('industry',     'صناعة وتصنيع',        'Industry',        '🏭', '#212F3D', false)
 on conflict (slug) do nothing;
 
--- ── الدول الأساسية ────────────────────────────────────────
 insert into countries (code, name_ar, name_en, flag, currency, currency_symbol, primary_language, text_direction) values
   ('US', 'الولايات المتحدة',       'United States',  '🇺🇸', 'USD', '$',   'en-US', 'ltr'),
   ('GB', 'المملكة المتحدة',        'United Kingdom', '🇬🇧', 'GBP', '£',   'en-GB', 'ltr'),
