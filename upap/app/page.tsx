@@ -10,14 +10,22 @@ export default function HomePage() {
         <p className="font-mono text-xs text-brass tracking-wider mb-3">UPAP CORE</p>
         <h1 className="font-arabic text-3xl font-bold text-ink mb-3">نظام تشغيل المهن</h1>
         <p className="font-arabic text-ink-soft mb-8">
-          الوكيل الأول جاهز للتجربة — قارئ الفواتير بالمحاسبة.
+          وكيلان جاهزان للتجربة — المحاسبة والمحاماة.
         </p>
-        <Link
-          href="/professions/accounting/invoice-reader"
-          className="inline-block bg-ink text-white font-arabic px-6 py-3"
-        >
-          جرّب وكيل قراءة الفواتير ←
-        </Link>
+        <div className="flex flex-col gap-3 items-center">
+          <Link
+            href="/professions/accounting/invoice-reader"
+            className="inline-block bg-ink text-white font-arabic px-6 py-3 w-full max-w-xs text-center"
+          >
+            📊 قارئ الفواتير ←
+          </Link>
+          <Link
+            href="/professions/law/contract-reviewer"
+            className="inline-block bg-ink text-white font-arabic px-6 py-3 w-full max-w-xs text-center"
+          >
+            ⚖️ مراجع العقود ←
+          </Link>
+        </div>
       </div>
     </main>
   );
