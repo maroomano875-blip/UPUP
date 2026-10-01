@@ -1,10 +1,13 @@
 "use client";
 // ==========================================================
-// صفحة وكيل قراءة الفواتير — أول واجهة فعلية على المنصة
+// صفحة وكيل قراءة الفواتير — الآن مع اختيار الدولة الفعلي
+// الدولة المختارة بتغيّر اللغة المرسلة للوكيل + تنسيقات الفحص
 // ==========================================================
 import { useState } from "react";
 import { FileUpload } from "../../../../ui/components/FileUpload";
 import { ResultCard } from "../../../../ui/components/ResultCard";
+import { CountrySelector, SUPPORTED_COUNTRIES, CountryOption } from "../../../../ui/components/CountrySelector";
+import { CurrencyDisplay } from "../../../../ui/components/CurrencyDisplay";
 
 interface InvoiceResult {
   request_id: string;
@@ -28,6 +31,7 @@ interface InvoiceResult {
 }
 
 export default function InvoiceReaderPage() {
+  const [country, setCountry] = useState<CountryOption>(SUPPORTED_COUNTRIES[0]);
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [result, setResult] = useState<InvoiceResult | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
@@ -38,8 +42,8 @@ export default function InvoiceReaderPage() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("country", "US");
-      formData.append("language", "ar");
+      formData.append("country", country.code);
+      formData.append("language", country.language);
 
       const res = await fetch("/api/agents/invoice-reader", {
         method: "POST",
@@ -59,7 +63,7 @@ export default function InvoiceReaderPage() {
 
   return (
     <main dir="rtl" className="min-h-screen bg-paper px-4 py-10 max-w-2xl mx-auto">
-      <div className="mb-8">
+      <div className="mb-6">
         <p className="font-mono text-xs text-brass tracking-wider mb-2">
           ACCOUNTING / INVOICE READER
         </p>
@@ -69,12 +73,17 @@ export default function InvoiceReaderPage() {
         </p>
       </div>
 
+      <div className="mb-6">
+        <p className="font-arabic text-xs text-ink-soft mb-2">الدولة (تحدد اللغة وقواعد الفحص):</p>
+        <CountrySelector value={country.code} onChange={setCountry} />
+      </div>
+
       <FileUpload onFileSelected={handleFile} />
 
       {status === "loading" && (
         <div className="mt-6 border border-hairline bg-paper-raised px-5 py-4">
           <p className="font-mono text-xs text-brass animate-pulse">
-            جارِ قراءة الفاتورة ومراجعتها...
+            جارِ قراءة الفاتورة ومراجعتها ({country.name_ar})...
           </p>
         </div>
       )}
@@ -87,6 +96,9 @@ export default function InvoiceReaderPage() {
 
       {status === "done" && result && (
         <div className="mt-6">
+          <div className="flex justify-end mb-2">
+            <CurrencyDisplay currency={result.output.currency || country.currency} amount={result.output.total} />
+          </div>
           <ResultCard
             title_ar={`فاتورة ${result.output.vendor_name || "غير معروف"}`}
             confidence={result.confidence_score}
