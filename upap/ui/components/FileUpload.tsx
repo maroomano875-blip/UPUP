@@ -1,12 +1,9 @@
 "use client";
-// ==========================================================
-// مكون رفع الملفات — يدعم السحب والإفلات، ومناسب للجوال
-// ==========================================================
 import { useState, useRef } from "react";
 
 interface FileUploadProps {
   onFileSelected: (file: File) => void;
-  accept?: string;          // مثال: ".pdf,.jpg,.png"
+  accept?: string;
   label_ar?: string;
   label_en?: string;
 }
@@ -37,7 +34,7 @@ export function FileUpload({
         if (file) handleFile(file);
       }}
       onClick={() => inputRef.current?.click()}
-      className={`border border-hairline bg-paper-raised px-6 py-10 text-center cursor-pointer transition-colors
+      className={`border border-hairline bg-paper px-6 py-8 text-center cursor-pointer transition-colors
         ${isDragging ? "border-brass bg-[#F5F0E8]" : "hover:border-brass/60"}`}
     >
       <input
