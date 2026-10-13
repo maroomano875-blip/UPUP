@@ -14,6 +14,7 @@ export async function POST(req: NextRequest) {
     const country = (formData.get("country") as string) || "US";
     const language = (formData.get("language") as string) || "en-US";
     const clientId = (formData.get("client_id") as string) || "00000000-0000-0000-0000-000000000001";
+    const notes = ((formData.get("notes") as string) || "").trim().slice(0, 4000);
 
     if (!file) {
       return NextResponse.json({ error: "لم يتم إرفاق ملف" }, { status: 400 });
@@ -31,6 +32,8 @@ export async function POST(req: NextRequest) {
       imageBase64 = Buffer.from(arrayBuffer).toString("base64");
       extractedText = "(عقد بصيغة صورة — يُقرأ مباشرة عبر موديل الرؤية)";
     }
+
+    if (notes) extractedText += "\n\n[ملاحظات المستخدم]\n" + notes;
 
     const agent = await createAgent(CONTRACT_REVIEWER_CONFIG);
     const result = await agent.run({

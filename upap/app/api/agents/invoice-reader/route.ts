@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
     // معرف عميل تجريبي ثابت (مُسجَّل بملف supabase/migrations/002_seed_invoice_reader.sql)
     // لاحقاً يُستبدل بحساب حقيقي بعد ربط المصادقة (Supabase Auth)
     const clientId = (formData.get("client_id") as string) || "00000000-0000-0000-0000-000000000001";
+    const notes = ((formData.get("notes") as string) || "").trim().slice(0, 4000);
 
     if (!file) {
       return NextResponse.json({ error: "لم يتم إرفاق ملف" }, { status: 400 });
@@ -32,6 +33,8 @@ export async function POST(req: NextRequest) {
       imageBase64 = Buffer.from(arrayBuffer).toString("base64");
       extractedText = "(فاتورة بصيغة صورة — تُقرأ مباشرة عبر موديل الرؤية)";
     }
+
+    if (notes) extractedText += "\n\n[ملاحظات المستخدم]\n" + notes;
 
     const agent = await createAgent(INVOICE_READER_CONFIG);
     const result = await agent.run({
