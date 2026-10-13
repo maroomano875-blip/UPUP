@@ -9,12 +9,12 @@ export default function ProfessionPage({ params }: { params: { profession: strin
   const p = getProfession(params.profession);
   if (!p) notFound();
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100" dir="rtl">
-      <header className="border-b border-white/10" style={{ background: `linear-gradient(135deg, #0f172a 0%, ${p.color}55 160%)` }}>
+    <main className="min-h-screen bg-[#020617] text-[#f1f5f9]" dir="rtl">
+      <header className="border-b border-[rgba(255,255,255,0.1)]" style={{ background: `linear-gradient(135deg, #0f172a 0%, ${p.color}55 160%)` }}>
         <div className="mx-auto max-w-6xl px-5 py-8">
-          <Link href="/" className="text-sm text-slate-300 hover:underline">الرئيسية</Link>
+          <Link href="/" className="text-sm text-[#cbd5e1] hover:underline">الرئيسية</Link>
           <h1 className="mt-3 text-3xl font-bold">{p.icon} {p.name_ar}</h1>
-          <p className="mt-2 text-slate-300">{p.desc_ar}</p>
+          <p className="mt-2 text-[#cbd5e1]">{p.desc_ar}</p>
         </div>
       </header>
       <div className="mx-auto max-w-6xl px-5 py-8"><ProfessionHub p={p} /></div>
