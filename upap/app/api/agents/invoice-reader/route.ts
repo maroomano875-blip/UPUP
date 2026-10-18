@@ -1,3 +1,4 @@
+import { readUpload } from "../../../../lib/readUpload";
 // ==========================================================
 // نقطة الدخول الفعلية لوكيل قراءة الفواتير
 // ==========================================================
@@ -22,17 +23,10 @@ export async function POST(req: NextRequest) {
     }
 
     const arrayBuffer = await file.arrayBuffer();
-    const isPdf = file.type === "application/pdf";
+    const read = await readUpload(Buffer.from(arrayBuffer), file.name, file.type);
+    let extractedText = read.text;
+    const imageBase64: string | undefined = read.imageBase64;
 
-    let extractedText = "";
-    let imageBase64: string | undefined;
-
-    if (isPdf) {
-      extractedText = await ocrPDF(Buffer.from(arrayBuffer));
-    } else {
-      imageBase64 = Buffer.from(arrayBuffer).toString("base64");
-      extractedText = "(فاتورة بصيغة صورة — تُقرأ مباشرة عبر موديل الرؤية)";
-    }
 
     if (notes) extractedText += "\n\n[ملاحظات المستخدم]\n" + notes;
 
