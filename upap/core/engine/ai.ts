@@ -1,14 +1,17 @@
 import { parseLooseJSON } from "../../lib/parseLooseJSON";
-// ==========================================================
-// محرك الذكاء الاصطناعي الموحّد
-// الأولوية: OpenRouter (مجاني) → Gemini (مجاني) → خطأ واضح
-// ==========================================================
+
+// ============================================================
+// محرك الذكاء الاصطناعي: OpenRouter (مجاني، يُختار تلقائياً من النماذج المتاحة الآن) → Gemini
+// - يجلب قائمة النماذج المجانية الحية ويخزنها ساعة (لا نعتمد على أسماء قد تُحذف)
+// - مهلة لكل محاولة، ويجرّب عدة نماذج بالتتابع
+// - الرد الفارغ يُعتبر فشلاً فيُجرَّب نموذج آخر
+// ============================================================
 
 export interface AIRequest {
   systemPrompt: string;
   userText: string;
-  imageBase64?: string;        // اختياري — للفواتير والوثائق الممسوحة
-  temperature?: number;        // افتراضي: 0.1 (دقة عالية للبيانات المالية)
+  imageBase64?: string;
+  temperature?: number;
   maxTokens?: number;
 }
 
@@ -19,108 +22,181 @@ export interface AIResponse {
   latency_ms: number;
 }
 
-// ── OpenRouter ────────────────────────────────────────────
-async function callOpenRouter(req: AIRequest): Promise<AIResponse> {
+const OR_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS ?? 40000);
+const OR_MAX_ATTEMPTS = Number(process.env.AI_MAX_ATTEMPTS ?? 3);
+
+type ORModel = {
+  id: string;
+  context_length?: number;
+  pricing?: { prompt?: string; completion?: string };
+  architecture?: { input_modalities?: string[]; output_modalities?: string[] };
+  supported_parameters?: string[];
+};
+
+let cache: { at: number; models: ORModel[] } | null = null;
+
+async function listFreeModels(): Promise<ORModel[]> {
+  if (cache && Date.now() - cache.at < 3600_000) return cache.models;
+  try {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 8000);
+    const res = await fetch("https://openrouter.ai/api/v1/models", { signal: ctl.signal });
+    clearTimeout(t);
+    if (!res.ok) throw new Error(String(res.status));
+    const data = (await res.json()) as { data?: ORModel[] };
+    const free = (data.data ?? []).filter(
+      (m) =>
+        m.id &&
+        Number(m.pricing?.prompt ?? "1") === 0 &&
+        Number(m.pricing?.completion ?? "1") === 0 &&
+        (m.architecture?.output_modalities ?? ["text"]).includes("text") &&
+        (m.context_length ?? 0) >= 16000
+    );
+    cache = { at: Date.now(), models: free };
+    return free;
+  } catch {
+    return cache?.models ?? [];
+  }
+}
+
+// تفضيل نماذج قوية بالعربية واتباع التعليمات
+function score(m: ORModel): number {
+  const id = m.id.toLowerCase();
+  let s = 0;
+  const prefs: [string, number][] = [
+    ["qwen", 30], ["llama-3.3-70b", 28], ["gpt-oss", 26], ["deepseek", 24], ["gemma-3", 22],
+    ["mistral", 14], ["llama-3.1-405b", 25], ["hermes", 10], ["gemini", 27],
+  ];
+  for (const [k, v] of prefs) if (id.includes(k)) s = Math.max(s, v);
+  if (/(7b|8b|3b|1b|4b|mini)/.test(id)) s -= 15; // نماذج صغيرة ضعيفة بالعربية
+  if (/(70b|72b|120b|235b|405b|large)/.test(id)) s += 6;
+  if (/(thinking|reason|r1)/.test(id)) s -= 8; // بطيئة
+  s += Math.min((m.context_length ?? 0) / 100000, 3);
+  return s;
+}
+
+async function pickModels(vision: boolean): Promise<string[]> {
+  const envList = (vision ? process.env.OPENROUTER_VISION_MODEL : process.env.OPENROUTER_MODEL)
+    ?.split(",").map((x) => x.trim()).filter(Boolean) ?? [];
+  const live = await listFreeModels();
+  const pool = live.filter((m) => (vision ? (m.architecture?.input_modalities ?? []).includes("image") : true));
+  const ranked = pool.sort((a, b) => score(b) - score(a)).map((m) => m.id);
+  const out = [...envList, ...ranked, "openrouter/free"];
+  return Array.from(new Set(out));
+}
+
+async function callOneModel(model: string, req: AIRequest): Promise<AIResponse> {
   const key = process.env.OPENROUTER_API_KEY;
-  if (!key) throw new Error("OPENROUTER_API_KEY مفقود في متغيرات البيئة");
+  if (!key) throw new Error("OPENROUTER_API_KEY مفقود في المتغيرات البيئية");
 
-  const isVision = Boolean(req.imageBase64);
-  const model = isVision
-    ? (process.env.OPENROUTER_VISION_MODEL ?? "google/gemini-flash-1.5:free")
-    : (process.env.OPENROUTER_MODEL ?? "meta-llama/llama-3.1-8b-instruct:free");
-
-  // بناء محتوى رسالة المستخدم (نص + صورة اختياري)
   const userContent: unknown[] = [{ type: "text", text: req.userText }];
   if (req.imageBase64) {
-    userContent.push({
-      type: "image_url",
-      image_url: { url: `data:image/jpeg;base64,${req.imageBase64}` },
-    });
+    userContent.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${req.imageBase64}` } });
   }
 
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), OR_TIMEOUT_MS);
   const start = Date.now();
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${key}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: req.systemPrompt },
-        { role: "user", content: userContent },
-      ],
-      temperature: req.temperature ?? 0.1,
-      max_tokens: req.maxTokens ?? 2000,
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.text().catch(() => res.statusText);
-    throw new Error(`OpenRouter ${res.status}: ${err}`);
+  try {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      signal: ctl.signal,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: req.systemPrompt },
+          { role: "user", content: userContent },
+        ],
+        temperature: req.temperature ?? 0.1,
+        max_tokens: req.maxTokens ?? 3000,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.text().catch(() => res.statusText);
+      throw new Error(`OpenRouter ${res.status} (${model}): ${err.slice(0, 200)}`);
+    }
+    const data = await res.json();
+    const text: string = data.choices?.[0]?.message?.content ?? "";
+    if (!text || !text.trim()) throw new Error(`رد فارغ من ${model}`);
+    return { text, provider: "openrouter", model: String(data.model ?? model), latency_ms: Date.now() - start };
+  } catch (e) {
+    if ((e as Error).name === "AbortError") throw new Error(`انتهت المهلة (${OR_TIMEOUT_MS}ms) للنموذج ${model}`);
+    throw e;
+  } finally {
+    clearTimeout(timer);
   }
-
-  const data = await res.json();
-  return {
-    text: data.choices?.[0]?.message?.content ?? "",
-    provider: "openrouter",
-    model,
-    latency_ms: Date.now() - start,
-  };
 }
 
-// ── Google Gemini (خطة احتياطية) ─────────────────────────
+async function callOpenRouter(req: AIRequest): Promise<AIResponse> {
+  const models = (await pickModels(Boolean(req.imageBase64))).slice(0, OR_MAX_ATTEMPTS);
+  let last: unknown;
+  for (const m of models) {
+    try {
+      return await callOneModel(m, req);
+    } catch (e) {
+      last = e;
+      console.warn("[AI] فشل", (e as Error).message);
+    }
+  }
+  throw last instanceof Error ? last : new Error("فشل OpenRouter");
+}
+
+// ── Google Gemini (احتياطي) ──
 async function callGemini(req: AIRequest): Promise<AIResponse> {
   const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error("GEMINI_API_KEY مفقود — لا يوجد أي مزود متاح");
+  if (!key) throw new Error("GEMINI_API_KEY مفقود — لا يوجد مزوّد احتياطي");
 
-  const model = process.env.GEMINI_MODEL ?? "gemini-1.5-flash";
-  const parts: unknown[] = [
-    { text: `${req.systemPrompt}\n\n${req.userText}` },
-  ];
-  if (req.imageBase64) {
-    parts.push({ inline_data: { mime_type: "image/jpeg", data: req.imageBase64 } });
-  }
+  const model = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+  const parts: unknown[] = [{ text: `${req.systemPrompt}\n\n${req.userText}` }];
+  if (req.imageBase64) parts.push({ inline_data: { mime_type: "image/jpeg", data: req.imageBase64 } });
 
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 60000);
   const start = Date.now();
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts }],
-        generationConfig: { temperature: req.temperature ?? 0.1 },
-      }),
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+      {
+        method: "POST",
+        signal: ctl.signal,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts }],
+          generationConfig: { temperature: req.temperature ?? 0.1, responseMimeType: "application/json" },
+        }),
+      }
+    );
+    if (!res.ok) {
+      const err = await res.text().catch(() => res.statusText);
+      throw new Error(`Gemini ${res.status}: ${err.slice(0, 200)}`);
     }
-  );
-
-  if (!res.ok) {
-    const err = await res.text().catch(() => res.statusText);
-    throw new Error(`Gemini ${res.status}: ${err}`);
+    const data = await res.json();
+    const text: string = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    if (!text.trim()) throw new Error("رد فارغ من Gemini");
+    return { text, provider: "gemini", model, latency_ms: Date.now() - start };
+  } finally {
+    clearTimeout(timer);
   }
-
-  const data = await res.json();
-  return {
-    text: data.candidates?.[0]?.content?.parts?.[0]?.text ?? "",
-    provider: "gemini",
-    model,
-    latency_ms: Date.now() - start,
-  };
 }
 
-// ── الدالة العامة: يجرب OpenRouter أولاً ثم Gemini ──────
+// ── الواجهة العامة: OpenRouter أولاً ثم Gemini ──
 export async function generateResponse(req: AIRequest): Promise<AIResponse> {
   try {
     return await callOpenRouter(req);
   } catch (primaryError) {
-    console.warn("[AI] OpenRouter فشل، انتقال إلى Gemini:", (primaryError as Error).message);
-    return await callGemini(req);
+    console.warn("[AI] OpenRouter فشل، الانتقال إلى Gemini:", (primaryError as Error).message);
+    try {
+      return await callGemini(req);
+    } catch (fallbackError) {
+      throw new Error(
+        `تعذّر الوصول لأي نموذج. OpenRouter: ${(primaryError as Error).message} | Gemini: ${(fallbackError as Error).message}`
+      );
+    }
   }
 }
 
-// مساعد: يستخرج JSON نظيف من نص قد يحتوي على Markdown fences
+// استخراج JSON متسامح (يتعامل مع Markdown وكلام حول الـJSON)
 export function extractJSON(raw: string): unknown {
   return parseLooseJSON(raw);
 }
