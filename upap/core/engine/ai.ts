@@ -1,3 +1,4 @@
+import { parseLooseJSON } from "../../lib/parseLooseJSON";
 // ==========================================================
 // محرك الذكاء الاصطناعي الموحّد
 // الأولوية: OpenRouter (مجاني) → Gemini (مجاني) → خطأ واضح
@@ -121,10 +122,5 @@ export async function generateResponse(req: AIRequest): Promise<AIResponse> {
 
 // مساعد: يستخرج JSON نظيف من نص قد يحتوي على Markdown fences
 export function extractJSON(raw: string): unknown {
-  const cleaned = raw
-    .replace(/^```json\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/```\s*$/i, "")
-    .trim();
-  return JSON.parse(cleaned);
+  return parseLooseJSON(raw);
 }

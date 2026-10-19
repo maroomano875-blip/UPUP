@@ -1,3 +1,4 @@
+import { parseLooseJSON } from "../../../lib/parseLooseJSON";
 // ==========================================================
 // قالب التحقق — كل وكيل يربط مخططه من core/factory/validators/schema.ts
 // ==========================================================
@@ -18,8 +19,9 @@ export function validateAgentOutput<T>(
   let parsed: unknown;
   try {
     const cleaned = rawText.replace(/```json|```/g, "").trim();
-    parsed = JSON.parse(cleaned);
+    parsed = parseLooseJSON(rawText);
   } catch {
+    console.error("[agent.validator] JSON parse failed. head:", String(rawText).slice(0, 600));
     return { success: false, errors: ["فشل تحويل الرد إلى JSON صالح"] };
   }
 
