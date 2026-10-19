@@ -94,10 +94,19 @@ export async function createAgent(config: AgentConfig) {
 
         let rawOutput: Record<string, unknown>;
         try {
-          rawOutput = extractJSON(aiRes.text) as Record<string, unknown>;
+        rawOutput = extractJSON(aiRes.text) as Record<string, unknown>;
+      } catch {
+        console.error("[createAgent] primary JSON parse failed. model:", aiRes.model, "len:", String(aiRes.text ?? "").length, "head:", String(aiRes.text ?? "").slice(0, 800));
+        try {
+          const fixRes = await generateResponse({
+            systemPrompt: "Convert the user's text into ONE valid JSON object. Output ONLY the JSON object, with no markdown fences and no commentary.",
+            userText: String(aiRes.text ?? "").slice(0, 12000),
+          });
+          rawOutput = extractJSON(fixRes.text) as Record<string, unknown>;
         } catch {
           throw new Error("فشل تحليل JSON من الوكيل الأساسي");
         }
+      }
 
         const confidence = (rawOutput.confidence_score as number) ?? 0;
         const needsHuman =

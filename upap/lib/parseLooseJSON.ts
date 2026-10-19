@@ -34,6 +34,26 @@ function sliceBalanced(s: string): string | null {
   return out + stack.reverse().join('');
 }
 
+// يهرّب أسطر جديدة/تبويبات خام داخل النصوص (النماذج كثيراً ما تتركها فتفسد JSON)
+function escapeControlsInStrings(s: string): string {
+  let out = '', inStr = false, esc = false;
+  for (const c of s) {
+    if (inStr) {
+      if (esc) { out += c; esc = false; continue; }
+      if (c === '\\') { out += c; esc = true; continue; }
+      if (c === '"') { inStr = false; out += c; continue; }
+      if (c === '\n') { out += '\\n'; continue; }
+      if (c === '\r') { out += '\\r'; continue; }
+      if (c === '\t') { out += '\\t'; continue; }
+      out += c;
+    } else {
+      if (c === '"') inStr = true;
+      out += c;
+    }
+  }
+  return out;
+}
+
 function removeTrailingCommas(s: string): string {
   return s.replace(/,\s*([}\]])/g, '$1');
 }
@@ -45,6 +65,7 @@ export function parseLooseJSON(raw: string): unknown {
   const sliced = sliceBalanced(base);
   if (sliced) attempts.push(sliced);
   for (const a of attempts.slice()) attempts.push(removeTrailingCommas(a));
+  for (const a of attempts.slice()) attempts.push(escapeControlsInStrings(a), removeTrailingCommas(escapeControlsInStrings(a)));
   let lastErr: unknown;
   for (const a of attempts) {
     try { return JSON.parse(a); } catch (e) { lastErr = e; }
