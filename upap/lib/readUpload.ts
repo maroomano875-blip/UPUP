@@ -134,7 +134,7 @@ async function pdfToImage(b: Buffer, warnings: string[]): Promise<string | undef
   }
 }
 
-export async function readUpload(b: Buffer, name = '', mime = ''): Promise<ReadResult> {
+async function readUploadRaw(b: Buffer, name = '', mime = ''): Promise<ReadResult> {
   const warnings: string[] = [];
   if (!b || b.length === 0) throw new UnreadableFileError('الملف فارغ. اختر الملف مرة أخرى.');
   if (b.length > MAX_BYTES) throw new UnreadableFileError('حجم الملف كبير جداً (الحد 25 ميغابايت).');
@@ -224,4 +224,18 @@ export async function readUpload(b: Buffer, name = '', mime = ''): Promise<ReadR
   } catch {
     throw new UnreadableFileError('صيغة الملف غير مدعومة. الصيغ المدعومة: PDF، صور (JPG/PNG/WEBP/HEIC)، Word، Excel، CSV، نص.');
   }
+}
+
+
+// تنظيف النص: Postgres يرفض \u0000 والرموز التحكمية والمزدوجات اليتيمة
+export function sanitizeText(t: string): string {
+  return String(t ?? "")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, " ")
+    .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, "")
+    .replace(/(^|[^\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "$1");
+}
+
+export async function readUpload(b: Buffer, name = "", mime = ""): Promise<ReadResult> {
+  const r = await readUploadRaw(b, name, mime);
+  return { ...r, text: sanitizeText(r.text) };
 }

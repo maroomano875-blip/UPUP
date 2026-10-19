@@ -104,7 +104,7 @@ export async function createAgent(config: AgentConfig) {
           });
           rawOutput = extractJSON(fixRes.text) as Record<string, unknown>;
         } catch {
-          throw new Error("فشل تحليل JSON من الوكيل الأساسي");
+          throw new Error("فشل تحليل JSON. النموذج=" + String(aiRes.model ?? "?") + " | الطول=" + String(aiRes.text ?? "").length + " | بداية الرد: " + String(aiRes.text ?? "").slice(0, 300).replace(/\s+/g, " "));
         }
       }
 
