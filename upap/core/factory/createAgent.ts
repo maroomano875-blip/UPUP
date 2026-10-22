@@ -7,6 +7,27 @@ import { generateResponse, extractJSON } from "../engine/ai";
 import { getDB } from "../engine/db";
 import { audit } from "../engine/audit";
 
+// ── جودة الرد: عدّ القيم الفعلية في JSON وبناء نص المستخدم ──
+function leafScore(v: unknown, key = ""): number {
+  if (key === "confidence_score" || key === "warnings") return 0;
+  if (v === null || v === undefined) return 0;
+  if (typeof v === "string") {
+    const t = v.trim().toLowerCase();
+    return t && t !== "—" && t !== "-" && t !== "null" && t !== "unknown" ? 1 : 0;
+  }
+  if (typeof v === "number") return v !== 0 ? 1 : 0;
+  if (Array.isArray(v)) return v.reduce((a: number, x) => a + leafScore(x), 0);
+  if (typeof v === "object") return Object.entries(v as Record<string, unknown>).reduce((a, [k, x]) => a + leafScore(x, k), 0);
+  return 0;
+}
+
+function buildUserText(extractedText: string, retry = false): string {
+  const note =
+    "ملاحظة: النص التالي مستخرج آلياً من ملف، وقد يكون ترتيب الأجزاء داخل السطر الواحد مقلوباً في العربية. اقرأه كاملاً وأعد بناء المعنى. المستند يحتوي نصاً فعلياً فلا تقل إنه فارغ.";
+  const again = retry ? "\nالمحاولة السابقة أرجعت حقولاً فارغة رغم وجود محتوى؛ استخرج كل الحقول الممكنة." : "";
+  return `${note}${again}\n\n[نص المستند]\n${extractedText}\n\nأعد JSON فقط.`;
+}
+
 // ── واجهة مدخل تشغيل الوكيل ──────────────────────────────
 export interface RunAgentInput {
   clientId: string;
@@ -80,7 +101,7 @@ export async function createAgent(config: AgentConfig) {
         await setStatus(requestId, "processing");
         const aiRes = await generateResponse({
           systemPrompt: buildPrompt(config, input),
-          userText: `${input.extractedText}\n\nأعد كائن JSON فقط.`,
+          userText: buildUserText(input.extractedText),
           imageBase64: input.imageBase64,
         });
 
@@ -92,22 +113,41 @@ export async function createAgent(config: AgentConfig) {
           metadata: { provider: aiRes.provider, model: aiRes.model, latency: aiRes.latency_ms },
         });
 
-        let rawOutput: Record<string, unknown>;
-        try {
-        rawOutput = extractJSON(aiRes.text) as Record<string, unknown>;
-      } catch {
-        console.error("[createAgent] primary JSON parse failed. model:", aiRes.model, "len:", String(aiRes.text ?? "").length, "head:", String(aiRes.text ?? "").slice(0, 800));
-        try {
-          const fixRes = await generateResponse({
-            systemPrompt: "Convert the user's text into ONE valid JSON object. Output ONLY the JSON object, with no markdown fences and no commentary.",
-            userText: String(aiRes.text ?? "").slice(0, 12000),
-          });
-          rawOutput = extractJSON(fixRes.text) as Record<string, unknown>;
-        } catch {
-          throw new Error("فشل تحليل JSON. النموذج=" + String(aiRes.model ?? "?") + " | الطول=" + String(aiRes.text ?? "").length + " | بداية الرد: " + String(aiRes.text ?? "").slice(0, 300).replace(/\s+/g, " "));
+        let rawOutput: Record<string, unknown> = {};
+        {
+          const tried: string[] = [String(aiRes.model)];
+          let cur = aiRes;
+          let best: Record<string, unknown> | null = null;
+          let bestScore = -1;
+          for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+              const obj = extractJSON(cur.text) as Record<string, unknown>;
+              const sc = leafScore(obj);
+              if (sc > bestScore) { best = obj; bestScore = sc; }
+              const shortDoc = input.extractedText.trim().length < 40 && !input.imageBase64;
+              if (sc >= 3 || shortDoc) break;
+              console.warn("[createAgent] رد شبه فارغ من", cur.model, "- إعادة المحاولة بنموذج آخر");
+            } catch {
+              console.error("[createAgent] JSON parse failed. model:", cur.model, "len:", String(cur.text ?? "").length, "head:", String(cur.text ?? "").slice(0, 400));
+            }
+            if (attempt === 1) break;
+            try {
+              cur = await generateResponse({
+                systemPrompt: buildPrompt(config, input),
+                userText: buildUserText(input.extractedText, true),
+                imageBase64: input.imageBase64,
+                avoidModels: tried,
+              });
+              tried.push(String(cur.model));
+            } catch { break; }
+          }
+          if (!best) {
+            throw new Error("فشل تحليل JSON. النموذج=" + String(cur.model ?? "?") + " | بداية الرد: " + String(cur.text ?? "").slice(0, 200).replace(/\s+/g, " "));
+          }
+          rawOutput = best;
         }
-      }
 
+        
         const confidence = (rawOutput.confidence_score as number) ?? 0;
         const needsHuman =
           config.requires_human_approval || confidence < config.confidence_threshold;
@@ -116,13 +156,17 @@ export async function createAgent(config: AgentConfig) {
         await setStatus(requestId, "reviewing");
         const reviewRes = await generateResponse({
           systemPrompt: `أنت مراجع خبير. افحص هذا JSON من وكيل ${config.name_ar} وتحقق من اتساقه المنطقي فقط. أعد نفس JSON مع تعديل warnings وconfidence_score إن لزم. JSON فقط.`,
-          userText: JSON.stringify(rawOutput),
+          userText: "[النص الأصلي]\n" + input.extractedText.slice(0, 6000) + "\n\n[المخرجات المطلوب مراجعتها]\n" + JSON.stringify(rawOutput),
         });
 
         let finalOutput = rawOutput;
         let reviewerNotes = "تمت المراجعة";
         try {
-          finalOutput = extractJSON(reviewRes.text) as Record<string, unknown>;
+          {
+          const rv = extractJSON(reviewRes.text) as Record<string, unknown>;
+          if (leafScore(rv) >= leafScore(rawOutput) * 0.6) finalOutput = rv;
+          else reviewerNotes = "تجاهلنا تعديل المراجع لأنه أفرغ البيانات";
+        }
         } catch {
           reviewerNotes = "فشلت المراجعة الآلية — استُخدمت النتيجة الأصلية";
         }

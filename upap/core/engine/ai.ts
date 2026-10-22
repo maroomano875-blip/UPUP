@@ -13,6 +13,7 @@ export interface AIRequest {
   imageBase64?: string;
   temperature?: number;
   maxTokens?: number;
+  avoidModels?: string[]; // نماذج جُرّبت وفشلت
 }
 
 export interface AIResponse {
@@ -75,14 +76,16 @@ function score(m: ORModel): number {
   return s;
 }
 
-async function pickModels(vision: boolean): Promise<string[]> {
+async function pickModels(vision: boolean, avoid: string[] = []): Promise<string[]> {
   const envList = (vision ? process.env.OPENROUTER_VISION_MODEL : process.env.OPENROUTER_MODEL)
     ?.split(",").map((x) => x.trim()).filter(Boolean) ?? [];
   const live = await listFreeModels();
   const pool = live.filter((m) => (vision ? (m.architecture?.input_modalities ?? []).includes("image") : true));
   const ranked = pool.sort((a, b) => score(b) - score(a)).map((m) => m.id);
   const out = [...envList, ...ranked, "openrouter/free"];
-  return Array.from(new Set(out));
+  const uniq = Array.from(new Set(out));
+  const fresh = uniq.filter((x) => !avoid.includes(x));
+  return fresh.length ? fresh : uniq;
 }
 
 async function callOneModel(model: string, req: AIRequest): Promise<AIResponse> {
@@ -106,7 +109,7 @@ async function callOneModel(model: string, req: AIRequest): Promise<AIResponse> 
         model,
         messages: [
           { role: "system", content: req.systemPrompt },
-          { role: "user", content: userContent },
+          { role: "user", content: req.imageBase64 ? userContent : req.userText },
         ],
         temperature: req.temperature ?? 0.1,
         max_tokens: req.maxTokens ?? 3000,
@@ -129,7 +132,7 @@ async function callOneModel(model: string, req: AIRequest): Promise<AIResponse> 
 }
 
 async function callOpenRouter(req: AIRequest): Promise<AIResponse> {
-  const models = (await pickModels(Boolean(req.imageBase64))).slice(0, OR_MAX_ATTEMPTS);
+  const models = (await pickModels(Boolean(req.imageBase64), req.avoidModels ?? [])).slice(0, OR_MAX_ATTEMPTS);
   let last: unknown;
   for (const m of models) {
     try {
