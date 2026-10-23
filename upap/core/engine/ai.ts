@@ -23,8 +23,8 @@ export interface AIResponse {
   latency_ms: number;
 }
 
-const OR_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS ?? 40000);
-const OR_MAX_ATTEMPTS = Number(process.env.AI_MAX_ATTEMPTS ?? 3);
+const OR_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS ?? 30000);
+const OR_MAX_ATTEMPTS = Number(process.env.AI_MAX_ATTEMPTS ?? 5);
 
 type ORModel = {
   id: string;
@@ -35,6 +35,8 @@ type ORModel = {
 };
 
 let cache: { at: number; models: ORModel[] } | null = null;
+const badUntil = new Map<string, number>(); // نموذج معطّل مؤقتاً
+const BAD_MS = 10 * 60 * 1000;
 
 async function listFreeModels(): Promise<ORModel[]> {
   if (cache && Date.now() - cache.at < 3600_000) return cache.models;
@@ -80,9 +82,14 @@ async function pickModels(vision: boolean, avoid: string[] = []): Promise<string
   const envList = (vision ? process.env.OPENROUTER_VISION_MODEL : process.env.OPENROUTER_MODEL)
     ?.split(",").map((x) => x.trim()).filter(Boolean) ?? [];
   const live = await listFreeModels();
-  const pool = live.filter((m) => (vision ? (m.architecture?.input_modalities ?? []).includes("image") : true));
+  const now = Date.now();
+  const pool = live.filter((m) => {
+    if ((badUntil.get(m.id) ?? 0) > now) return false;
+    if (vision) return (m.architecture?.input_modalities ?? []).includes("image");
+    return !/(-vl|vision|guard|moderation|embed|audio|tts|image|safety|nemotron)/i.test(m.id);
+  });
   const ranked = pool.sort((a, b) => score(b) - score(a)).map((m) => m.id);
-  const out = [...envList, ...ranked, "openrouter/free"];
+  const out = [...envList.filter((x) => (badUntil.get(x) ?? 0) <= now), ...ranked, "openrouter/free"];
   const uniq = Array.from(new Set(out));
   const fresh = uniq.filter((x) => !avoid.includes(x));
   return fresh.length ? fresh : uniq;
@@ -133,16 +140,18 @@ async function callOneModel(model: string, req: AIRequest): Promise<AIResponse> 
 
 async function callOpenRouter(req: AIRequest): Promise<AIResponse> {
   const models = (await pickModels(Boolean(req.imageBase64), req.avoidModels ?? [])).slice(0, OR_MAX_ATTEMPTS);
-  let last: unknown;
+  const errors: string[] = [];
   for (const m of models) {
     try {
       return await callOneModel(m, req);
     } catch (e) {
-      last = e;
-      console.warn("[AI] فشل", (e as Error).message);
+      const msg = (e as Error).message;
+      badUntil.set(m, Date.now() + BAD_MS);
+      errors.push(`${m}: ${msg.replace(/\s+/g, " ").slice(0, 90)}`);
+      console.warn("[AI] فشل", msg);
     }
   }
-  throw last instanceof Error ? last : new Error("فشل OpenRouter");
+  throw new Error(`فشلت ${errors.length} محاولات | ` + errors.join(" ; "));
 }
 
 // ── Google Gemini (احتياطي) ──
