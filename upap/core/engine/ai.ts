@@ -85,8 +85,13 @@ async function pickModels(vision: boolean, avoid: string[] = []): Promise<string
   const now = Date.now();
   const pool = live.filter((m) => {
     if ((badUntil.get(m.id) ?? 0) > now) return false;
+    const outs = m.architecture?.output_modalities ?? ["text"];
+    if (outs.length !== 1 || outs[0] !== "text") return false; // لا صوت/صورة
+    if (!m.id.endsWith(":free")) return false;                 // المجاني الرسمي فقط
+    const sz = m.id.match(/(\d+(?:\.\d+)?)b(?![a-z])/i);
+    if (sz && Number(sz[1]) < 20) return false;               // النماذج الصغيرة ضعيفة بالعربية
     if (vision) return (m.architecture?.input_modalities ?? []).includes("image");
-    return !/(-vl|vision|guard|moderation|embed|audio|tts|image|safety|nemotron)/i.test(m.id);
+    return !/(-vl|vision|guard|moderation|embed|audio|tts|image|safety|nemotron|lyria|clip|music|laguna|inkling)/i.test(m.id);
   });
   const ranked = pool.sort((a, b) => score(b) - score(a)).map((m) => m.id);
   const out = [...envList.filter((x) => (badUntil.get(x) ?? 0) <= now), ...ranked, "openrouter/free"];
@@ -154,6 +159,40 @@ async function callOpenRouter(req: AIRequest): Promise<AIResponse> {
   throw new Error(`فشلت ${errors.length} محاولات | ` + errors.join(" ; "));
 }
 
+// ── Groq (احتياطي مجاني وسريع، نص فقط) ──
+async function callGroq(req: AIRequest): Promise<AIResponse> {
+  const key = process.env.GROQ_API_KEY;
+  if (!key) throw new Error("GROQ_API_KEY مفقود");
+  if (req.imageBase64) throw new Error("Groq لا يدعم الصور هنا");
+  const model = process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile";
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 45000);
+  const start = Date.now();
+  try {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      signal: ctl.signal,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: req.systemPrompt },
+          { role: "user", content: req.userText },
+        ],
+        temperature: req.temperature ?? 0.1,
+        max_tokens: req.maxTokens ?? 3000,
+      }),
+    });
+    if (!res.ok) throw new Error(`Groq ${res.status}: ${(await res.text().catch(() => "")).slice(0, 160)}`);
+    const data = await res.json();
+    const text: string = data.choices?.[0]?.message?.content ?? "";
+    if (!text.trim()) throw new Error("رد فارغ من Groq");
+    return { text, provider: "openrouter", model: `groq/${model}`, latency_ms: Date.now() - start };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // ── Google Gemini (احتياطي) ──
 async function callGemini(req: AIRequest): Promise<AIResponse> {
   const key = process.env.GEMINI_API_KEY;
@@ -194,6 +233,14 @@ async function callGemini(req: AIRequest): Promise<AIResponse> {
 
 // ── الواجهة العامة: OpenRouter أولاً ثم Gemini ──
 export async function generateResponse(req: AIRequest): Promise<AIResponse> {
+  // Groq أولاً للنص فقط إن وُجد مفتاحه (أسرع وأكثر استقراراً من النماذج المجانية العشوائية)
+  if (process.env.GROQ_API_KEY && !req.imageBase64 && !(req.avoidModels ?? []).some((x) => x.startsWith("groq/"))) {
+    try {
+      return await callGroq(req);
+    } catch (e) {
+      console.warn("[AI] Groq فشل:", (e as Error).message);
+    }
+  }
   try {
     return await callOpenRouter(req);
   } catch (primaryError) {

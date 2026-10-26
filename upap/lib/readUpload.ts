@@ -79,6 +79,51 @@ async function heicToJpegBuffer(b: Buffer): Promise<Buffer> {
   return Buffer.from(out);
 }
 
+// أسطر الجداول: pdf-parse يلصق أعمدة الأرقام (21,250,0002,500,000)، فنستخرجها بمواضعها ونفصلها بـ |
+async function tableLines(b: Buffer): Promise<string> {
+  try {
+    const { getDocumentProxy } = await import('unpdf');
+    const pdf = await getDocumentProxy(new Uint8Array(b));
+    const out: string[] = [];
+    for (let p = 1; p <= Math.min(pdf.numPages, 5); p++) {
+      const page = await pdf.getPage(p);
+      const tc = await page.getTextContent();
+      type It = { s: string; x: number; y: number; w: number };
+      const items: It[] = (tc.items as any[])
+        .filter((i) => i.str && String(i.str).trim())
+        .map((i) => ({ s: String(i.str), x: Number(i.transform[4]), y: Number(i.transform[5]), w: Number(i.width) || 0 }));
+      items.sort((a, c) => c.y - a.y);
+      const lines: It[][] = [];
+      for (const it of items) {
+        const l = lines.find((ln) => Math.abs(ln[0].y - it.y) < 3);
+        if (l) l.push(it); else lines.push([it]);
+      }
+      for (const ln of lines) {
+        const joined = ln.map((i) => i.s).join('');
+        const rtl = (joined.match(/[\u0600-\u06FF\uFB50-\uFEFF]/g) || []).length > joined.replace(/\s/g, '').length * 0.3;
+        ln.sort((a, c) => (rtl ? c.x - a.x : a.x - c.x));
+        let line = '';
+        let prev: It | null = null;
+        for (const it of ln) {
+          if (prev) {
+            const gap = rtl ? prev.x - (it.x + it.w) : it.x - (prev.x + prev.w);
+            line += gap > 6 ? ' | ' : gap > 0.5 ? ' ' : '';
+          }
+          line += it.s;
+          prev = it;
+        }
+        const cells = line.split(' | ');
+        const numeric = cells.filter((c) => /\d/.test(c)).length;
+        if (cells.length >= 3 && numeric >= 2) out.push(line.trim());
+      }
+    }
+    if (!out.length) return '';
+    return '\n\n[أسطر الجداول: الأعمدة مفصولة بـ | والأرقام هنا هي المرجع الدقيق للكميات والأسعار والإجماليات]\n' + out.join('\n');
+  } catch {
+    return '';
+  }
+}
+
 async function pdfText(b: Buffer, warnings: string[]): Promise<string> {
   // المحاولة 1: pdf-parse
   try {
@@ -87,7 +132,7 @@ async function pdfText(b: Buffer, warnings: string[]): Promise<string> {
     const parse = mod.default ?? mod;
     const r = await parse(b);
     const t = (r.text || '').trim();
-    if (t.length > 20) return t;
+    if (t.length > 20) return t + (await tableLines(b));
   } catch (e) {
     warnings.push('pdf-parse: ' + (e instanceof Error ? e.message : 'failed'));
   }
