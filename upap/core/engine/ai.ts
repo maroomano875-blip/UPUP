@@ -94,7 +94,8 @@ async function pickModels(vision: boolean, avoid: string[] = []): Promise<string
     return !/(-vl|vision|guard|moderation|embed|audio|tts|image|safety|nemotron|lyria|clip|music|laguna|inkling)/i.test(m.id);
   });
   const ranked = pool.sort((a, b) => score(b) - score(a)).map((m) => m.id);
-  const out = [...envList.filter((x) => (badUntil.get(x) ?? 0) <= now), ...ranked, "openrouter/free"];
+  const BAD = /(-vl|vision|guard|moderation|embed|audio|tts|image|safety|lyria|clip|music|laguna|inkling)/i;
+  const out = [...envList.filter((x) => (badUntil.get(x) ?? 0) <= now && (vision || !BAD.test(x))), ...ranked, "openrouter/free"];
   const uniq = Array.from(new Set(out));
   const fresh = uniq.filter((x) => !avoid.includes(x));
   return fresh.length ? fresh : uniq;
@@ -193,66 +194,110 @@ async function callGroq(req: AIRequest): Promise<AIResponse> {
   }
 }
 
-// ── Google Gemini (احتياطي) ──
-async function callGemini(req: AIRequest): Promise<AIResponse> {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error("GEMINI_API_KEY مفقود — لا يوجد مزوّد احتياطي");
+// ── Google Gemini: يكتشف أحدث نموذج flash متاح لمفتاحك تلقائياً ──
+let gcache: { at: number; ids: string[] } | null = null;
 
-  const model = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+async function geminiModels(key: string): Promise<string[]> {
+  if (gcache && Date.now() - gcache.at < 3600_000) return gcache.ids;
+  let found: string[] = [];
+  try {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 8000);
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=${key}`, { signal: ctl.signal });
+    clearTimeout(t);
+    if (res.ok) {
+      const data = (await res.json()) as { models?: { name: string; supportedGenerationMethods?: string[] }[] };
+      found = (data.models ?? [])
+        .filter((m) => (m.supportedGenerationMethods ?? []).includes("generateContent"))
+        .map((m) => m.name.replace(/^models\//, ""))
+        .filter((n) => /^gemini-\d+(\.\d+)?-flash(-\d+)?$/.test(n))
+        .sort((x, y) => parseFloat(y.match(/gemini-(\d+(?:\.\d+)?)/)![1]) - parseFloat(x.match(/gemini-(\d+(?:\.\d+)?)/)![1]));
+    }
+  } catch {
+    /* نكمل بالقائمة الاحتياطية */
+  }
+  const ids = Array.from(new Set([...(process.env.GEMINI_MODEL ? [process.env.GEMINI_MODEL] : []), ...found, "gemini-flash-latest"]));
+  gcache = { at: Date.now(), ids };
+  return ids;
+}
+
+async function callOneGemini(model: string, key: string, req: AIRequest): Promise<AIResponse> {
   const parts: unknown[] = [{ text: `${req.systemPrompt}\n\n${req.userText}` }];
   if (req.imageBase64) parts.push({ inline_data: { mime_type: "image/jpeg", data: req.imageBase64 } });
-
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), 60000);
   const start = Date.now();
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
-      {
-        method: "POST",
-        signal: ctl.signal,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts }],
-          generationConfig: { temperature: req.temperature ?? 0.1, responseMimeType: "application/json" },
-        }),
-      }
-    );
-    if (!res.ok) {
-      const err = await res.text().catch(() => res.statusText);
-      throw new Error(`Gemini ${res.status}: ${err.slice(0, 200)}`);
-    }
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
+      method: "POST",
+      signal: ctl.signal,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts }],
+        generationConfig: { temperature: req.temperature ?? 0.1, responseMimeType: "application/json" },
+      }),
+    });
+    if (!res.ok) throw new Error(`Gemini ${res.status} (${model}): ${(await res.text().catch(() => "")).slice(0, 140)}`);
     const data = await res.json();
     const text: string = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-    if (!text.trim()) throw new Error("رد فارغ من Gemini");
-    return { text, provider: "gemini", model, latency_ms: Date.now() - start };
+    if (!text.trim()) throw new Error(`رد فارغ من Gemini (${model})`);
+    return { text, provider: "gemini", model: `gemini/${model}`, latency_ms: Date.now() - start };
+  } catch (e) {
+    if ((e as Error).name === "AbortError") throw new Error(`انتهت مهلة Gemini (${model})`);
+    throw e;
   } finally {
     clearTimeout(timer);
   }
 }
 
+async function callGemini(req: AIRequest): Promise<AIResponse> {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error("GEMINI_API_KEY مفقود");
+  const avoid = req.avoidModels ?? [];
+  const now = Date.now();
+  const ids = (await geminiModels(key)).filter((m) => !avoid.includes(`gemini/${m}`) && (badUntil.get(`gemini/${m}`) ?? 0) <= now);
+  const errors: string[] = [];
+  for (const m of ids.slice(0, 3)) {
+    try {
+      return await callOneGemini(m, key, req);
+    } catch (e) {
+      badUntil.set(`gemini/${m}`, Date.now() + BAD_MS);
+      errors.push((e as Error).message.replace(/\s+/g, " ").slice(0, 120));
+    }
+  }
+  throw new Error(errors.join(" ; ") || "لا نموذج Gemini متاح");
+}
+
 // ── الواجهة العامة: OpenRouter أولاً ثم Gemini ──
 export async function generateResponse(req: AIRequest): Promise<AIResponse> {
-  // Groq أولاً للنص فقط إن وُجد مفتاحه (أسرع وأكثر استقراراً من النماذج المجانية العشوائية)
-  if (process.env.GROQ_API_KEY && !req.imageBase64 && !(req.avoidModels ?? []).some((x) => x.startsWith("groq/"))) {
+  const errors: string[] = [];
+  const avoid = req.avoidModels ?? [];
+
+  // 1) Groq (نص فقط، إن وُجد مفتاحه)
+  if (process.env.GROQ_API_KEY && !req.imageBase64 && !avoid.some((x) => x.startsWith("groq/"))) {
     try {
       return await callGroq(req);
     } catch (e) {
+      errors.push("Groq: " + (e as Error).message.slice(0, 150));
       console.warn("[AI] Groq فشل:", (e as Error).message);
     }
   }
-  try {
-    return await callOpenRouter(req);
-  } catch (primaryError) {
-    console.warn("[AI] OpenRouter فشل، الانتقال إلى Gemini:", (primaryError as Error).message);
+  // 2) Gemini (يدعم الصور، ويكتشف النموذج المتاح)
+  if (process.env.GEMINI_API_KEY) {
     try {
       return await callGemini(req);
-    } catch (fallbackError) {
-      throw new Error(
-        `تعذّر الوصول لأي نموذج. OpenRouter: ${(primaryError as Error).message} | Gemini: ${(fallbackError as Error).message}`
-      );
+    } catch (e) {
+      errors.push("Gemini: " + (e as Error).message.slice(0, 200));
+      console.warn("[AI] Gemini فشل:", (e as Error).message);
     }
   }
+  // 3) OpenRouter (مجاني، متقلب)
+  try {
+    return await callOpenRouter(req);
+  } catch (e) {
+    errors.push("OpenRouter: " + (e as Error).message.slice(0, 300));
+  }
+  throw new Error("تعذّر الوصول لأي نموذج. " + errors.join(" | "));
 }
 
 // استخراج JSON متسامح (يتعامل مع Markdown وكلام حول الـJSON)
