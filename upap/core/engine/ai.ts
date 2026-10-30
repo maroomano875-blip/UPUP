@@ -266,7 +266,7 @@ async function callGemini(req: AIRequest): Promise<AIResponse> {
         return await callOneGemini(m, key, req);
       } catch (e) {
         const msg = (e as Error).message;
-        const busy = /Gemini (503|429|500)/.test(msg) || /انتهت مهلة/.test(msg);
+        const busy = /Gemini (503|429|500)/.test(msg);
         if (!busy) badUntil.set(`gemini/${m}`, Date.now() + BAD_MS); // 404/400: نموذج غير صالح
         if (busy && k < 2) { await sleep(1500 * (k + 1)); continue; } // ازدحام مؤقت: نعيد المحاولة
         errors.push(msg.replace(/\s+/g, " ").slice(0, 120));
