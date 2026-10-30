@@ -7,6 +7,7 @@ import { COUNTRIES, LANGUAGES, VOLATILE, complianceChecks, fmtMoney, getCountry 
 type Tab = 'run' | 'log' | 'clients' | 'new';
 interface Client { id: string; name: string; note: string }
 interface Run { id: string; clientId: string; agent: string; file: string; confidence: number; at: string; summary: string }
+interface Audit { at: string; event: string; detail: string }
 interface Row { id: string; status: string; agent: string; country: string; confidence: number | null; created_at: string }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Out = Record<string, any>;
@@ -45,6 +46,11 @@ async function shrink(f: File): Promise<File> {
   } catch { return f; }
 }
 
+function isEmptyOut(o: Out): boolean {
+  if (Array.isArray(o.clauses)) return o.clauses.length === 0 && !o.executive_summary_ar;
+  return !o.vendor_name && !o.total && !o.invoice_number;
+}
+
 const fieldCls = 'w-full rounded-lg border border-[rgba(255,255,255,0.15)] bg-[#020617] px-3 py-2.5 text-[#f1f5f9] focus:outline-none focus:ring-2 focus:ring-[#818cf8]';
 const card = 'rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.7)] p-5';
 
@@ -65,6 +71,9 @@ function Result({ data, color }: { data: Out; color: string }) {
   const conf = Math.round((data.confidence_score ?? 0) * 100);
   const warnings: string[] = data.warnings ?? [];
   const isContract = Array.isArray(o.clauses);
+  if (isEmptyOut(o)) {
+    return <div className={`mt-5 rounded-lg border px-4 py-3 text-sm leading-7 ${sev.blocker}`}>لم يستطع الوكيل استخراج أي بيانات من هذا الملف، رغم أن النموذج أعطى نسبة ثقة. لا تعتمد هذه النتيجة. جرّب صورة أوضح وأقل ميلاناً، أو أعد المحاولة بعد قليل، ثم افتح تبويب «السجل والأنشطة» لمعرفة أي نموذج أجاب.</div>;
+  }
   const rows: [string, string][] = isContract
     ? [['القانون الحاكم', o.governing_law], ['الاختصاص', o.jurisdiction], ['النوع', o.contract_type]]
     : [['المورد', o.vendor_name], ['رقم الفاتورة', o.invoice_number], ['التاريخ', o.invoice_date], ['الإجمالي', `${o.total ?? ''} ${o.currency ?? ''}`.trim()], ['التصنيف', o.category], ['القيد المقترح', o.suggested_journal_entry?.debit_account && `مدين: ${o.suggested_journal_entry.debit_account}`]]
@@ -113,13 +122,14 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
   const [runs, setRuns] = useState<Run[]>([]);
   const [rows, setRows] = useState<Row[] | null>(null);
   const [connected, setConnected] = useState(true);
+  const [audit, setAudit] = useState<Audit[]>([]);
   const [cName, setCName] = useState(''); const [cNote, setCNote] = useState(''); const [editing, setEditing] = useState('');
   const inp = useRef<HTMLInputElement>(null);
 
   useEffect(() => { setClients(load<Client>(KEY_C)); setRuns(load<Run>(KEY_R)); }, []);
   useEffect(() => {
     if (tab !== 'log') return;
-    fetch(`/api/activity?agents=${p.agents.map((a) => a.slug).join(',')}`).then((r) => r.json()).then((d) => { setRows(d.rows); setConnected(d.connected); }).catch(() => setRows([]));
+    fetch(`/api/activity?agents=${p.agents.map((a) => a.slug).join(',')}`).then((r) => r.json()).then((d) => { setRows(d.rows); setConnected(d.connected); setAudit(d.audit ?? []); }).catch(() => setRows([]));
   }, [tab, p.agents]);
 
   const langs = Array.from(new Set([...country.languages, 'ar', 'en-US']));
@@ -141,6 +151,7 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
       if (!r.ok) throw new Error(d.error || 'فشلت المعالجة');
       setRes(d); setSt('done');
       const o: Out = d.output ?? {};
+      if (isEmptyOut(o)) return;
       const run: Run = { id: String(Date.now()), clientId, agent: cur.slug, file: file.name, confidence: d.confidence_score ?? 0, at: new Date().toISOString(),
         summary: Array.isArray(o.clauses) ? `${o.clauses.length} بند · ${o.contract_type ?? ''}` : `${o.vendor_name ?? ''} · ${o.total ?? ''} ${o.currency ?? ''}` };
       const nr = [run, ...runs].slice(0, 200); setRuns(nr); save(KEY_R, nr);
@@ -259,6 +270,15 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
                     <span className="block text-xs text-[#94a3b8]" dir="auto">{r.summary}</span></span>
                   <span className="text-xs text-[#94a3b8]" dir="ltr">{Math.round(r.confidence * 100)}% · {new Date(r.at).toLocaleString('ar')}</span>
                 </li>
+              ))}
+            </ul>
+          </section>
+          <section className={card}>
+            <h2 className="font-semibold">أحداث التدقيق (أي نموذج أجاب)</h2>
+            <ul className="mt-3 divide-y divide-[rgba(255,255,255,0.1)]">
+              {audit.length === 0 && <li className="py-2 text-sm text-[#94a3b8]">لا أحداث.</li>}
+              {audit.map((a, i) => (
+                <li key={i} className="py-2 text-xs" dir="ltr"><b className="text-[#a5b4fc]">{a.event}</b> <span className="text-[#94a3b8]">{a.at.slice(5, 16).replace('T', ' ')}</span><div className="mt-0.5 break-all text-[#cbd5e1]">{a.detail}</div></li>
               ))}
             </ul>
           </section>
