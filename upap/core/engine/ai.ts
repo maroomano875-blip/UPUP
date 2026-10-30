@@ -210,7 +210,7 @@ async function geminiModels(key: string): Promise<string[]> {
       found = (data.models ?? [])
         .filter((m) => (m.supportedGenerationMethods ?? []).includes("generateContent"))
         .map((m) => m.name.replace(/^models\//, ""))
-        .filter((n) => /^gemini-\d+(\.\d+)?-flash(-\d+)?$/.test(n))
+        .filter((n) => /^gemini-\d+(\.\d+)?-flash(-lite)?(-\d+)?$/.test(n))
         .sort((x, y) => parseFloat(y.match(/gemini-(\d+(?:\.\d+)?)/)![1]) - parseFloat(x.match(/gemini-(\d+(?:\.\d+)?)/)![1]));
     }
   } catch {
@@ -260,20 +260,21 @@ async function callGemini(req: AIRequest): Promise<AIResponse> {
   if (ids.length === 0) ids = all; // لا نترك القائمة فارغة أبداً
   const errors: string[] = [];
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-  for (const m of ids.slice(0, 4)) {
+  for (const m of ids.slice(0, 8)) {
     for (let k = 0; k < 3; k++) {
       try {
         return await callOneGemini(m, key, req);
       } catch (e) {
         const msg = (e as Error).message;
-        const busy = /Gemini (503|429|500)/.test(msg);
-        if (!busy) badUntil.set(`gemini/${m}`, Date.now() + BAD_MS); // 404/400: نموذج غير صالح
+        const busy = /Gemini (503|500)/.test(msg);
+        if (!busy) badUntil.set(`gemini/${m}`, Date.now() + (/Gemini 429/.test(msg) ? 180_000 : BAD_MS)); // 404/400: نموذج غير صالح
         if (busy && k < 2) { await sleep(1500 * (k + 1)); continue; } // ازدحام مؤقت: نعيد المحاولة
         errors.push(msg.replace(/\s+/g, " ").slice(0, 120));
         break;
       }
     }
   }
+  if (errors.length && errors.every((x) => /Gemini 429/.test(x))) throw new Error("حصة Gemini المجانية استُنفدت لكل النماذج (تتجدد منتصف الليل بتوقيت المحيط الهادئ).");
   throw new Error(errors.join(" ; ") || "لا نموذج Gemini متاح");
 }
 
