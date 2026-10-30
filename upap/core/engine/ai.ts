@@ -216,7 +216,7 @@ async function geminiModels(key: string): Promise<string[]> {
   } catch {
     /* نكمل بالقائمة الاحتياطية */
   }
-  const ids = Array.from(new Set([...(process.env.GEMINI_MODEL ? [process.env.GEMINI_MODEL] : []), ...found, "gemini-flash-latest"]));
+  const ids = Array.from(new Set([...found, "gemini-flash-latest", "gemini-flash-lite-latest", ...(process.env.GEMINI_MODEL ? [process.env.GEMINI_MODEL] : [])]));
   gcache = { at: Date.now(), ids };
   return ids;
 }
@@ -255,21 +255,39 @@ async function callGemini(req: AIRequest): Promise<AIResponse> {
   if (!key) throw new Error("GEMINI_API_KEY مفقود");
   const avoid = req.avoidModels ?? [];
   const now = Date.now();
-  const ids = (await geminiModels(key)).filter((m) => !avoid.includes(`gemini/${m}`) && (badUntil.get(`gemini/${m}`) ?? 0) <= now);
+  const all = await geminiModels(key);
+  let ids = all.filter((m) => !avoid.includes(`gemini/${m}`) && (badUntil.get(`gemini/${m}`) ?? 0) <= now);
+  if (ids.length === 0) ids = all; // لا نترك القائمة فارغة أبداً
   const errors: string[] = [];
-  for (const m of ids.slice(0, 3)) {
-    try {
-      return await callOneGemini(m, key, req);
-    } catch (e) {
-      badUntil.set(`gemini/${m}`, Date.now() + BAD_MS);
-      errors.push((e as Error).message.replace(/\s+/g, " ").slice(0, 120));
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  for (const m of ids.slice(0, 4)) {
+    for (let k = 0; k < 3; k++) {
+      try {
+        return await callOneGemini(m, key, req);
+      } catch (e) {
+        const msg = (e as Error).message;
+        const busy = /Gemini (503|429|500)/.test(msg) || /انتهت مهلة/.test(msg);
+        if (!busy) badUntil.set(`gemini/${m}`, Date.now() + BAD_MS); // 404/400: نموذج غير صالح
+        if (busy && k < 2) { await sleep(1500 * (k + 1)); continue; } // ازدحام مؤقت: نعيد المحاولة
+        errors.push(msg.replace(/\s+/g, " ").slice(0, 120));
+        break;
+      }
     }
   }
   throw new Error(errors.join(" ; ") || "لا نموذج Gemini متاح");
 }
 
 // ── الواجهة العامة: OpenRouter أولاً ثم Gemini ──
+const LANG_NAMES: Record<string, string> = { ar: "العربية", en: "English", fr: "Français", tr: "Türkçe", es: "Español", de: "Deutsch", it: "Italiano", pt: "Português", ru: "Русский", fa: "فارسی", ur: "اردو" };
+function langDirective(prompt: string): string {
+  const m = prompt.match(/اللغة\s*:\s*([A-Za-z]{2,3})(?:[-_][A-Za-z]{2,4})?/);
+  if (!m) return "";
+  const name = LANG_NAMES[m[1].toLowerCase()] ?? m[0].split(":")[1].trim();
+  return `\n\nتعليمة إلزامية للّغة: اكتب كل القيم النصية في JSON (أسماء البنود، الشروح، التوصيات، الملخصات، التحذيرات) بلغة «${name}» فقط. أبقِ مفاتيح JSON وقيم المستويات (low/medium/high/critical) بالإنجليزية كما هي. لا تخلط لغتين.`;
+}
+
 export async function generateResponse(req: AIRequest): Promise<AIResponse> {
+  req = { ...req, systemPrompt: req.systemPrompt + langDirective(req.systemPrompt) };
   const errors: string[] = [];
   const avoid = req.avoidModels ?? [];
 
