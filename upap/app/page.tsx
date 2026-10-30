@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import { PROFESSIONS, liveAgents } from '../data/catalog';
-import { COUNTRIES, VOLATILE } from '../data/countries';
+import { COUNTRIES, LANGUAGES, VOLATILE } from '../data/countries';
 import { LAYERS } from '../data/layers';
 import { loadStats } from '../lib/stats';
+import AgentConsole from '../ui/components/AgentConsole';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,6 +45,15 @@ export default async function Home() {
       </header>
 
       <div className="mx-auto max-w-6xl px-5 py-8 space-y-12">
+        <section className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+          {[[PROFESSIONS.length, 'مهنة'], [COUNTRIES.length, 'دولة'], [Object.keys(LANGUAGES).length, 'لغة'], ['$0', 'رأس مال مطلوب']].map(([v, l]) => (
+            <div key={String(l)} className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.7)] py-4">
+              <div className="text-3xl font-bold text-[#e0b45a]">{v}</div><div className="text-xs text-[#cbd5e1] mt-1">{l}</div>
+            </div>
+          ))}
+        </section>
+        <AgentConsole />
+
         <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {cards.map((c) => (
             <div key={c.label} className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.7)] p-4">
@@ -60,12 +70,12 @@ export default async function Home() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {PROFESSIONS.map((p) => (
               <Link key={p.slug} href={`/professions/${p.slug}`}
-                className="group rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.7)] p-4 transition hover:border-[rgba(255,255,255,0.3)] hover:bg-[#0f172a]"
-                style={{ borderTop: `3px solid ${p.color}` }}>
-                <div className="text-2xl">{p.icon}</div>
-                <div className="mt-2 font-semibold">{p.name_ar}</div>
+                className="group rounded-xl border border-[rgba(255,255,255,0.1)] p-4 transition hover:-translate-y-0.5"
+                style={{ borderTop: `3px solid ${p.color}`, background: `linear-gradient(160deg, ${p.color}26 0%, #0f172acc 70%)` }}>
+                <div className="grid h-11 w-11 place-items-center rounded-xl text-2xl" style={{ background: `${p.color}33`, boxShadow: `inset 0 0 0 1px ${p.color}66` }}>{p.icon}</div>
+                <div className="mt-3 font-semibold" style={{ color: p.color }}>{p.name_ar}</div>
                 <div className="text-xs text-[#94a3b8] mt-1 line-clamp-2">{p.desc_ar}</div>
-                <span className={`mt-3 inline-block rounded-full border px-2 py-0.5 text-[11px] ${p.status === 'live' ? stateStyle.built : stateStyle.planned}`}>
+                <span className="mt-3 inline-block rounded-full border px-2 py-0.5 text-[11px]" style={p.status === 'live' ? { borderColor: `${p.color}80`, background: `${p.color}26`, color: p.color } : { borderColor: 'rgba(148,163,184,0.3)', color: '#94a3b8' }}>
                   {p.status === 'live' ? `يعمل · ${p.agents.length} وكيل` : 'قريباً'}
                 </span>
               </Link>
