@@ -278,6 +278,40 @@ async function callGemini(req: AIRequest): Promise<AIResponse> {
   throw new Error(errors.join(" ; ") || "لا نموذج Gemini متاح");
 }
 
+// ── Cloudflare Workers AI (مجاني 10,000 وحدة/يوم، يدعم الصور) ──
+async function callCloudflare(req: AIRequest): Promise<AIResponse> {
+  const acc = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const tok = process.env.CLOUDFLARE_API_TOKEN;
+  if (!acc || !tok) throw new Error("مفاتيح Cloudflare مفقودة");
+  const model = process.env.CLOUDFLARE_MODEL ?? "@cf/meta/llama-4-scout-17b-16e-instruct";
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 45000);
+  const start = Date.now();
+  try {
+    const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${acc}/ai/v1/chat/completions`, {
+      method: "POST",
+      signal: ctl.signal,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: req.systemPrompt },
+          { role: "user", content: req.imageBase64 ? [{ type: "text", text: req.userText }, { type: "image_url", image_url: { url: `data:image/jpeg;base64,${req.imageBase64}` } }] : req.userText },
+        ],
+        temperature: req.temperature ?? 0.1,
+        max_tokens: req.maxTokens ?? 3000,
+      }),
+    });
+    if (!res.ok) throw new Error(`Cloudflare ${res.status}: ${(await res.text().catch(() => "")).slice(0, 160)}`);
+    const data = await res.json();
+    const text: string = data.choices?.[0]?.message?.content ?? "";
+    if (!text.trim()) throw new Error("رد فارغ من Cloudflare");
+    return { text, provider: "openrouter", model: `cloudflare/${model}`, latency_ms: Date.now() - start };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // ── الواجهة العامة: OpenRouter أولاً ثم Gemini ──
 const LANG_NAMES: Record<string, string> = { ar: "العربية", en: "English", fr: "Français", tr: "Türkçe", es: "Español", de: "Deutsch", it: "Italiano", pt: "Português", ru: "Русский", fa: "فارسی", ur: "اردو" };
 function langDirective(prompt: string): string {
@@ -308,6 +342,15 @@ export async function generateResponse(req: AIRequest): Promise<AIResponse> {
     } catch (e) {
       errors.push("Gemini: " + (e as Error).message.slice(0, 200));
       console.warn("[AI] Gemini فشل:", (e as Error).message);
+    }
+  }
+  // 2.7) Cloudflare Workers AI (احتياط مجاني، نص وصور)
+  if (process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN && !avoid.some((x) => x.startsWith("cloudflare/"))) {
+    try {
+      return await callCloudflare(req);
+    } catch (e) {
+      errors.push("Cloudflare: " + (e as Error).message.slice(0, 160));
+      console.warn("[AI] Cloudflare فشل:", (e as Error).message);
     }
   }
   // 3) OpenRouter (مجاني، متقلب)
