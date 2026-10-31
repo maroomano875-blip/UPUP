@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import type { Profession } from '../../data/catalog';
+import { SAMPLES } from '../../data/samples';
 import { COUNTRIES, LANGUAGES, VOLATILE, complianceChecks, fmtMoney, getCountry } from '../../data/countries';
 
 /* ---------- أنواع ونصوص ---------- */
@@ -44,6 +45,27 @@ async function shrink(f: File): Promise<File> {
     const blob: Blob | null = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.85));
     return blob ? new File([blob], f.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' }) : f;
   } catch { return f; }
+}
+
+// تخزين مؤقت لنتائج الملفات المكررة (على هذا الجهاز فقط)
+const KEY_CACHE = 'upap_cache_v1';
+async function fileKey(f: File, extra: string): Promise<string> {
+  try {
+    const h = await crypto.subtle.digest('SHA-256', await f.arrayBuffer());
+    return Array.from(new Uint8Array(h)).map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 32) + '|' + extra;
+  } catch { return ''; }
+}
+function cacheGet(k: string): Out | null {
+  if (!k) return null;
+  try { return (JSON.parse(localStorage.getItem(KEY_CACHE) || '{}') as Record<string, Out>)[k] ?? null; } catch { return null; }
+}
+function cacheSet(k: string, v: Out) {
+  if (!k) return;
+  try {
+    const all = JSON.parse(localStorage.getItem(KEY_CACHE) || '{}') as Record<string, Out>;
+    const keys = Object.keys(all); if (keys.length >= 12) delete all[keys[0]];
+    all[k] = v; localStorage.setItem(KEY_CACHE, JSON.stringify(all));
+  } catch { /* التخزين ممتلئ أو غير متاح */ }
 }
 
 function isEmptyOut(o: Out): boolean {
@@ -118,6 +140,8 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
   const [st, setSt] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [res, setRes] = useState<Out | null>(null);
   const [err, setErr] = useState('');
+  const [sec, setSec] = useState(0);
+  const [badge, setBadge] = useState('');
   const [clients, setClients] = useState<Client[]>([]);
   const [runs, setRuns] = useState<Run[]>([]);
   const [rows, setRows] = useState<Row[] | null>(null);
@@ -137,25 +161,46 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
   const cur = p.agents.find((a) => a.slug === agent);
   const myRuns = runs.filter((r) => p.agents.some((a) => a.slug === r.agent));
 
+  useEffect(() => {
+    if (st !== 'loading') return;
+    setSec(0); const t = setInterval(() => setSec((x) => x + 1), 1000);
+    return () => clearInterval(t);
+  }, [st]);
+
+  function runSample() {
+    const sm = SAMPLES[agent]; if (!sm) return;
+    setErr(''); setBadge(`نتيجة تجريبية محفوظة: ${sm.label}. لم يُستدعَ أي نموذج.`); setRes(sm.data); setSt('done');
+  }
+
   async function run() {
     if (!file || !cur) return;
-    setSt('loading'); setErr(''); setRes(null);
+    setSt('loading'); setErr(''); setRes(null); setBadge('');
+    const ctl = new AbortController();
+    const to = setTimeout(() => ctl.abort(), 85_000);
     try {
       const f = await shrink(file);
       if (f.size > 4_300_000) throw new Error('الملف أكبر من 4.3MB. صوّره بدقة أقل أو قسّم الملف.');
+      const ck = await fileKey(f, `${cur.slug}|${code}|${lang}|${notes}`);
+      const hit = cacheGet(ck);
+      if (hit) { setBadge('نتيجة محفوظة لهذا الملف نفسه (لم يُستهلك أي طلب).'); setRes(hit); setSt('done'); return; }
       const fd = new FormData();
       fd.append('file', f); fd.append('country', code); fd.append('language', lang); fd.append('notes', notes);
-      const r = await fetch(`/api/agents/${cur.slug}`, { method: 'POST', body: fd });
+      const r = await fetch(`/api/agents/${cur.slug}`, { method: 'POST', body: fd, signal: ctl.signal });
       const txt = await r.text();
       let d: Out; try { d = JSON.parse(txt); } catch { throw new Error(r.status === 413 ? 'الملف كبير جداً.' : `ردّ غير متوقع من الخادم (${r.status}).`); }
       if (!r.ok) throw new Error(d.error || 'فشلت المعالجة');
       setRes(d); setSt('done');
       const o: Out = d.output ?? {};
       if (isEmptyOut(o)) return;
+      cacheSet(ck, d);
       const run: Run = { id: String(Date.now()), clientId, agent: cur.slug, file: file.name, confidence: d.confidence_score ?? 0, at: new Date().toISOString(),
         summary: Array.isArray(o.clauses) ? `${o.clauses.length} بند · ${o.contract_type ?? ''}` : `${o.vendor_name ?? ''} · ${o.total ?? ''} ${o.currency ?? ''}` };
       const nr = [run, ...runs].slice(0, 200); setRuns(nr); save(KEY_R, nr);
-    } catch (e) { setErr(e instanceof Error ? e.message : 'خطأ غير متوقع'); setSt('error'); }
+    } catch (e) {
+      const aborted = e instanceof Error && e.name === 'AbortError';
+      setErr(aborted ? 'استغرق التحليل وقتاً أطول من المعتاد لأن الخوادم المجانية مزدحمة الآن. أعد المحاولة بعد دقيقة، أو جرّب «المثال الجاهز» لرؤية شكل النتيجة فوراً.' : e instanceof Error ? e.message : 'خطأ غير متوقع');
+      setSt('error');
+    } finally { clearTimeout(to); }
   }
 
   function saveClient() {
@@ -226,8 +271,13 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
                   </select>
                   <button onClick={run} disabled={!file || st === 'loading'}
                     className="mt-4 w-full rounded-lg py-3 font-bold text-[#020617] disabled:opacity-40" style={{ background: p.color }}>
-                    {st === 'loading' ? 'جارِ التحليل… قد يستغرق دقيقة' : 'ابدأ التحليل ←'}
+                    {st === 'loading' ? `جارِ التحليل… ${sec} ث (الملفات الممسوحة قد تستغرق حتى دقيقة)` : 'ابدأ التحليل ←'}
                   </button>
+                  {SAMPLES[agent] && (
+                    <button type="button" onClick={runSample} className="mt-3 w-full rounded-lg border px-4 py-2.5 text-sm font-semibold"
+                      style={{ borderColor: p.color, color: p.color }}>⚡ جرّب مثالاً جاهزاً (فوري): {SAMPLES[agent].label}</button>
+                  )}
+                  {st === 'done' && badge && <div className={`mt-4 rounded-lg border px-4 py-2 text-xs ${sev.info}`}>{badge}</div>}
                   {st === 'error' && <div className={`mt-4 rounded-lg border px-4 py-3 text-sm leading-7 ${sev.blocker}`} dir="auto">⚠ {err}</div>}
                   {st === 'done' && res && <Result data={res} color={p.color} />}
                 </Step>
