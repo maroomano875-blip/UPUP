@@ -24,6 +24,7 @@ export interface AIResponse {
 }
 
 const OR_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS ?? 30000);
+const GEMINI_TIMEOUT_MS = Number(process.env.GEMINI_TIMEOUT_MS ?? 50000);
 const OR_MAX_ATTEMPTS = Number(process.env.AI_MAX_ATTEMPTS ?? 5);
 
 type ORModel = {
@@ -216,7 +217,7 @@ async function geminiModels(key: string): Promise<string[]> {
   } catch {
     /* نكمل بالقائمة الاحتياطية */
   }
-  const ids = Array.from(new Set([...found, "gemini-flash-latest", "gemini-flash-lite-latest", ...(process.env.GEMINI_MODEL ? [process.env.GEMINI_MODEL] : [])]));
+  const ids = Array.from(new Set([...found, "gemini-flash-latest", "gemini-flash-lite-latest", ...(process.env.GEMINI_MODEL && !/2\.5/.test(process.env.GEMINI_MODEL) ? [process.env.GEMINI_MODEL] : [])]));
   gcache = { at: Date.now(), ids };
   return ids;
 }
