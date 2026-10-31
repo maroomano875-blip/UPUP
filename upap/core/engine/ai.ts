@@ -340,7 +340,7 @@ export async function generateResponse(req: AIRequest): Promise<AIResponse> {
     try {
       return await callGemini(req);
     } catch (e) {
-      errors.push("Gemini: " + (e as Error).message.slice(0, 200));
+      errors.push("Gemini: " + (e as Error).message.replace(/\s+/g," ").slice(0, 110));
       console.warn("[AI] Gemini فشل:", (e as Error).message);
     }
   }
@@ -353,6 +353,8 @@ export async function generateResponse(req: AIRequest): Promise<AIResponse> {
       console.warn("[AI] Cloudflare فشل:", (e as Error).message);
     }
   }
+  if (!(process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN)) errors.push("Cloudflare: المتغيران غير مضبوطين على الخادم");
+  else if (avoid.some((x) => x.startsWith("cloudflare/"))) errors.push("Cloudflare: متجنَّب بعد محاولة سابقة");
   // 3) OpenRouter (مجاني، متقلب)
   try {
     return await callOpenRouter(req);
