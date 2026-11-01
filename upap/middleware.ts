@@ -18,7 +18,7 @@ export async function middleware(req: NextRequest) {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!base || !key) return NextResponse.next();
 
-  const h = { apikey: key, Authorization: `Bearer ${key}` };
+  const h: Record<string, string> = key.startsWith('eyJ') ? { apikey: key, Authorization: `Bearer ${key}` } : { apikey: key };
   const ip = (req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown').split(',')[0].trim();
   const who = 'ip:' + (await sha(ip));
   const hourAgo = new Date(Date.now() - 3600_000).toISOString();
