@@ -258,7 +258,8 @@ async function callGemini(req: AIRequest): Promise<AIResponse> {
   const now = Date.now();
   const all = await geminiModels(key);
   let ids = all.filter((m) => !avoid.includes(`gemini/${m}`) && (badUntil.get(`gemini/${m}`) ?? 0) <= now);
-  if (ids.length === 0) ids = all; // لا نترك القائمة فارغة أبداً
+  if (ids.length === 0) ids = all;
+  ids = [...ids].sort((x, y) => Number(y.includes("lite")) - Number(x.includes("lite"))); // لا نترك القائمة فارغة أبداً
   const errors: string[] = [];
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const g0 = Date.now();
