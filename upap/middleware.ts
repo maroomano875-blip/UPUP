@@ -26,6 +26,7 @@ export async function middleware(req: NextRequest) {
 
   const count = async (q: string): Promise<number> => {
     const r = await fetch(`${base}/rest/v1/rate_hits?select=id&${q}`, { headers: { ...h, Prefer: 'count=exact', Range: '0-0' } });
+    if (!r.ok) throw new Error('count ' + r.status);
     const m = /\/(\d+)$/.exec(r.headers.get('content-range') || '');
     return m ? Number(m[1]) : 0;
   };
@@ -46,6 +47,9 @@ export async function middleware(req: NextRequest) {
       const old = new Date(Date.now() - 2 * 86_400_000).toISOString();
       await fetch(`${base}/rest/v1/rate_hits?at=lt.${old}`, { method: 'DELETE', headers: h });
     }
-  } catch { /* عطل في العدّاد: لا نمنع المستخدم */ }
+  } catch (e) {
+    // عطل في العدّاد: لا نمنع المستخدم، لكن نسجّل السبب في الجدول للفحص.
+    try { await fetch(`${base}/rest/v1/rate_hits`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ key: 'err:' + String(e).slice(0, 100) }) }); } catch { /* تجاهل */ }
+  }
   return NextResponse.next();
 }
