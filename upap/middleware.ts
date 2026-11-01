@@ -13,7 +13,22 @@ async function sha(s: string): Promise<string> {
 }
 
 export async function middleware(req: NextRequest) {
-  if (req.nextUrl.pathname === '/api/agents/_ping') return NextResponse.json({ middleware: 'running', hasKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY, hasUrl: !!(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL) });
+  if (req.nextUrl.pathname === '/api/agents/_ping') {
+    const k = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    const b = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
+    const hh: Record<string, string> = k.startsWith('eyJ') ? { apikey: k, Authorization: `Bearer ${k}` } : { apikey: k };
+    const out: Record<string, unknown> = { middleware: 'running', hasKey: !!k, hasUrl: !!b };
+    try {
+      const ip0 = (req.headers.get('x-forwarded-for') || 'unknown').split(',')[0].trim();
+      const w = 'ip:' + (await sha(ip0));
+      out.who = w;
+      const r1 = await fetch(`${b}/rest/v1/rate_hits?select=id&key=eq.${w}`, { headers: { ...hh, Prefer: 'count=exact', Range: '0-0' } });
+      out.count = { status: r1.status, range: r1.headers.get('content-range') };
+      const r2 = await fetch(`${b}/rest/v1/rate_hits`, { method: 'POST', headers: { ...hh, 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ key: 'ping:' + w }) });
+      out.insert = { status: r2.status, body: (await r2.text()).slice(0, 150) };
+    } catch (e) { out.error = String(e).slice(0, 200); }
+    return NextResponse.json(out);
+  }
   if (req.method !== 'POST') return NextResponse.next();
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
