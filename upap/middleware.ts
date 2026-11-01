@@ -13,6 +13,7 @@ async function sha(s: string): Promise<string> {
 }
 
 export async function middleware(req: NextRequest) {
+  if (req.nextUrl.pathname === '/api/agents/_ping') return NextResponse.json({ middleware: 'running', hasKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY, hasUrl: !!(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL) });
   if (req.method !== 'POST') return NextResponse.next();
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
