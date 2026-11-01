@@ -154,10 +154,10 @@ export async function createAgent(config: AgentConfig) {
 
         // 4️⃣ المراجعة المزدوجة (reviewing)
         await setStatus(requestId, "reviewing");
-        const reviewRes = await generateResponse({
+        const reviewRes = await withTimeout(generateResponse({
           systemPrompt: `أنت مراجع خبير. افحص هذا JSON من وكيل ${config.name_ar} وتحقق من اتساقه المنطقي فقط. أعد نفس JSON مع تعديل warnings وconfidence_score إن لزم. JSON فقط.`,
           userText: "[النص الأصلي]\n" + input.extractedText.slice(0, 6000) + "\n\n[المخرجات المطلوب مراجعتها]\n" + JSON.stringify(rawOutput),
-        });
+        }), 25000, { text: "" } as Awaited<ReturnType<typeof generateResponse>>);
 
         let finalOutput = rawOutput;
         let reviewerNotes = "تمت المراجعة";
@@ -225,4 +225,9 @@ export async function createAgent(config: AgentConfig) {
       }
     },
   };
+}
+
+// مهلة للمراجعة: إن تأخرت أو فشلت نُسلّم النتيجة الأولية دون مراجعة (تظهر في ملاحظات المراجع).
+function withTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([p.catch(() => fallback), new Promise<T>((r) => setTimeout(() => r(fallback), ms))]);
 }
