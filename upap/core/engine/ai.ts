@@ -226,7 +226,7 @@ async function callOneGemini(model: string, key: string, req: AIRequest): Promis
   const parts: unknown[] = [{ text: `${req.systemPrompt}\n\n${req.userText}` }];
   if (req.imageBase64) parts.push({ inline_data: { mime_type: "image/jpeg", data: req.imageBase64 } });
   const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), 60000);
+  const timer = setTimeout(() => ctl.abort(), 25000);
   const start = Date.now();
   try {
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
@@ -261,15 +261,17 @@ async function callGemini(req: AIRequest): Promise<AIResponse> {
   if (ids.length === 0) ids = all; // لا نترك القائمة فارغة أبداً
   const errors: string[] = [];
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-  for (const m of ids.slice(0, 8)) {
-    for (let k = 0; k < 3; k++) {
+  const g0 = Date.now();
+  for (const m of ids.slice(0, 4)) {
+    if (Date.now() - g0 > 28000) break;
+    for (let k = 0; k < 2; k++) {
       try {
         return await callOneGemini(m, key, req);
       } catch (e) {
         const msg = (e as Error).message;
         const busy = /Gemini (503|500)/.test(msg);
         if (!busy) badUntil.set(`gemini/${m}`, Date.now() + (/Gemini 429/.test(msg) ? 180_000 : BAD_MS)); // 404/400: نموذج غير صالح
-        if (busy && k < 2) { await sleep(1500 * (k + 1)); continue; } // ازدحام مؤقت: نعيد المحاولة
+        if (busy && k < 1) { await sleep(1500 * (k + 1)); continue; } // ازدحام مؤقت: نعيد المحاولة
         errors.push(msg.replace(/\s+/g, " ").slice(0, 120));
         break;
       }
@@ -324,6 +326,7 @@ function langDirective(prompt: string): string {
 
 export async function generateResponse(req: AIRequest): Promise<AIResponse> {
   req = { ...req, systemPrompt: req.systemPrompt + langDirective(req.systemPrompt) };
+  const t0 = Date.now();
   const errors: string[] = [];
   const avoid = req.avoidModels ?? [];
 
@@ -356,6 +359,7 @@ export async function generateResponse(req: AIRequest): Promise<AIResponse> {
   }
   if (!(process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN)) errors.push("Cloudflare: المتغيران غير مضبوطين على الخادم");
   else if (avoid.some((x) => x.startsWith("cloudflare/"))) errors.push("Cloudflare: متجنَّب بعد محاولة سابقة");
+  if (Date.now() - t0 > 55000) throw new Error("انتهى الوقت المسموح قبل الوصول لنموذج. " + errors.join(" | "));
   // 3) OpenRouter (مجاني، متقلب)
   try {
     return await callOpenRouter(req);
