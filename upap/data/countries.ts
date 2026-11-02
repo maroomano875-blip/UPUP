@@ -12,7 +12,7 @@ export const COUNTRIES: Country[] = [
   C('US', 'الولايات المتحدة', '🇺🇸', 'USD', 'en-US', 'Sales Tax / IRS', 'ltr', 'America/New_York', ['HIPAA', 'CCPA'], ['en-US']),
   C('GB', 'المملكة المتحدة', '🇬🇧', 'GBP', 'en-GB', 'VAT 20%', 'ltr', 'Europe/London', ['UK GDPR'], ['en-GB']),
   C('FR', 'فرنسا', '🇫🇷', 'EUR', 'fr-FR', 'TVA 20%', 'ltr', 'Europe/Paris', ['GDPR', 'EU AI Act'], ['fr', 'en-GB']),
-  C('DE', 'ألمانيا', '🇩🇪', 'EUR', 'de-DE', 'MwSt 19%', 'ltr', 'Europe/Berlin', ['GDPR', 'EU AI Act'], ['en-GB']),
+  C('DE', 'ألمانيا', '🇩🇪', 'EUR', 'de-DE', 'MwSt 19%', 'ltr', 'Europe/Berlin', ['GDPR', 'EU AI Act'], ['de', 'en-GB']),
   C('ES', 'إسبانيا', '🇪🇸', 'EUR', 'es-ES', 'IVA 21%', 'ltr', 'Europe/Madrid', ['GDPR', 'EU AI Act'], ['es', 'en-GB']),
   C('SA', 'السعودية', '🇸🇦', 'SAR', 'ar-SA', 'VAT 15% / ZATCA', 'rtl', 'Asia/Riyadh', ['PDPL-SA'], ['ar-SA', 'ar', 'en-US']),
   C('AE', 'الإمارات', '🇦🇪', 'AED', 'ar-AE', 'VAT 5%', 'rtl', 'Asia/Dubai', ['PDPL-AE'], ['ar', 'en-US']),
@@ -31,11 +31,18 @@ export const COUNTRIES: Country[] = [
   C('TR', 'تركيا', '🇹🇷', 'TRY', 'tr-TR', 'KDV 20% / e-Fatura', 'ltr', 'Europe/Istanbul', ['KVKK'], ['tr', 'en-US']),
   C('CA', 'كندا', '🇨🇦', 'CAD', 'en-CA', 'GST/HST', 'ltr', 'America/Toronto', ['PIPEDA'], ['en-US', 'fr']),
   C('AU', 'أستراليا', '🇦🇺', 'AUD', 'en-AU', 'GST 10%', 'ltr', 'Australia/Sydney', ['Privacy Act'], ['en-GB']),
+  C('IT', 'إيطاليا', '🇮🇹', 'EUR', 'it-IT', 'IVA 22%', 'ltr', 'Europe/Rome', ['GDPR', 'EU AI Act'], ['it', 'en-GB']),
+  C('IN', 'الهند', '🇮🇳', 'INR', 'en-IN', 'GST 5-28%', 'ltr', 'Asia/Kolkata', ['DPDP Act'], ['en-IN', 'hi']),
+  C('PK', 'باكستان', '🇵🇰', 'PKR', 'ur-PK', 'ضريبة مبيعات 18%', 'rtl', 'Asia/Karachi', ['—'], ['ur', 'en-GB']),
+  C('ID', 'إندونيسيا', '🇮🇩', 'IDR', 'id-ID', 'PPN 11-12%', 'ltr', 'Asia/Jakarta', ['UU PDP'], ['id', 'en-US']),
+  C('BR', 'البرازيل', '🇧🇷', 'BRL', 'pt-BR', 'ICMS / ISS', 'ltr', 'America/Sao_Paulo', ['LGPD'], ['pt-BR', 'en-US']),
 ];
 
 export const LANGUAGES: Record<string, string> = {
   'ar': 'العربية (فصحى)', 'ar-SA': 'العربية — السعودية', 'ar-EG': 'العربية — مصر', 'ar-SY': 'العربية — سوريا',
   'en-US': 'English (US)', 'en-GB': 'English (UK)', 'fr': 'Français', 'es': 'Español', 'tr': 'Türkçe',
+  'de': 'Deutsch', 'it': 'Italiano', 'pt-BR': 'Português (Brasil)', 'id': 'Bahasa Indonesia',
+  'hi': 'हिन्दी', 'ur': 'اردو', 'en-IN': 'English (India)',
 };
 export const VOLATILE = ['SYP', 'LBP', 'EGP', 'TRY', 'YER', 'IQD'];
 export const getCountry = (code: string) => COUNTRIES.find((c) => c.code === code) ?? COUNTRIES[0];
@@ -49,6 +56,7 @@ export function fmtMoney(amount: number, c: Country) {
 export interface Check { severity: 'blocker' | 'warning' | 'info'; text: string }
 export function complianceChecks(c: Country, professionSlug: string): Check[] {
   const out: Check[] = [];
+  out.push({ severity: 'info', text: 'نسب الضرائب والأنظمة المعروضة إرشادية، وتُراجع مع جهة مختصة قبل الاعتماد.' });
   if (c.restricted) out.push({ severity: 'warning', text: 'قيود على الدفع الدولي في هذا البلد — الاشتراك يتم بعملة USDT/TRC20.' });
   if (VOLATILE.includes(c.currency)) out.push({ severity: 'info', text: `عملة ${c.currency} متقلبة؛ تُعرض المبالغ كما وردت دون تحويل تلقائي.` });
   if (c.regs.some((r) => /GDPR|AI Act/.test(r))) out.push({ severity: 'info', text: 'لا تُرفع بيانات شخصية دون أساس قانوني؛ سجل التدقيق مفعّل لكل طلب.' });
