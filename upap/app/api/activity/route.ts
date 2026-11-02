@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
 
 // سجل الطلبات الأخيرة. قراءة آمنة: أي خطأ ← قائمة فارغة.
 export async function GET(req: Request) {
@@ -10,7 +12,7 @@ export async function GET(req: Request) {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return NextResponse.json({ connected: false, rows: [] });
   try {
-    const db = createClient(url, key, { auth: { persistSession: false } });
+    const db = createClient(url, key, { auth: { persistSession: false }, global: { fetch: (u: RequestInfo | URL, i?: RequestInit) => fetch(u, { ...i, cache: 'no-store' }) } });
     const au = await db.from('audit_log').select('*').order('created_at', { ascending: false }).limit(16);
     const skip = new Set(['id', 'created_at', 'request_id', 'client_id', 'event', 'action', 'type']);
     const audit = (au.data ?? []).map((r: Record<string, unknown>) => ({

@@ -8,7 +8,7 @@ export async function loadStats(): Promise<Stats> {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return { requests: null, audits: null, recent: [], connected: false };
   try {
-    const db = createClient(url, key, { auth: { persistSession: false } });
+    const db = createClient(url, key, { auth: { persistSession: false }, global: { fetch: (u: RequestInfo | URL, i?: RequestInit) => fetch(u, { ...i, cache: 'no-store' }) } });
     const [r, a, recent] = await Promise.all([
       db.from('requests').select('*', { count: 'exact', head: true }),
       db.from('audit_log').select('*', { count: 'exact', head: true }),

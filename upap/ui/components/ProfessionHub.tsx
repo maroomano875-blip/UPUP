@@ -153,7 +153,7 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
   useEffect(() => { setClients(load<Client>(KEY_C)); setRuns(load<Run>(KEY_R)); }, []);
   useEffect(() => {
     if (tab !== 'log') return;
-    fetch(`/api/activity?agents=${p.agents.map((a) => a.slug).join(',')}`).then((r) => r.json()).then((d) => { setRows(d.rows); setConnected(d.connected); setAudit(d.audit ?? []); }).catch(() => setRows([]));
+    fetch(`/api/activity?agents=${p.agents.map((a) => a.slug).join(',')}&t=${Date.now()}`, { cache: 'no-store' }).then((r) => r.json()).then((d) => { setRows(d.rows); setConnected(d.connected); setAudit(d.audit ?? []); }).catch(() => setRows([]));
   }, [tab, p.agents]);
 
   const langs = Array.from(new Set([...country.languages, 'ar', 'en-US']));
