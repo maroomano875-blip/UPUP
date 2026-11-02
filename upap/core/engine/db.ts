@@ -20,6 +20,7 @@ export function getDB(): SupabaseClient {
 
   _client = createClient(url, key, {
     auth: { persistSession: false },
+    global: { fetch: (u: RequestInfo | URL, i?: RequestInit) => fetch(u, { ...i, cache: 'no-store' }) },
   });
 
   return _client;
