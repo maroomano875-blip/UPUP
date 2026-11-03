@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Profession } from '../../data/catalog';
 import { SAMPLES } from '../../data/samples';
+import MedicalResult from './MedicalResult';
 import { COUNTRIES, LANGUAGES, VOLATILE, complianceChecks, fmtMoney, getCountry } from '../../data/countries';
 
 /* ---------- أنواع ونصوص ---------- */
@@ -69,6 +70,7 @@ function cacheSet(k: string, v: Out) {
 }
 
 function isEmptyOut(o: Out): boolean {
+  if (Array.isArray(o.tests)) return o.tests.length === 0 && !o.summary;
   if (Array.isArray(o.clauses)) return o.clauses.length === 0 && !o.executive_summary_ar;
   return !o.vendor_name && !o.total && !o.invoice_number;
 }
@@ -96,6 +98,7 @@ function Result({ data, color }: { data: Out; color: string }) {
   if (isEmptyOut(o)) {
     return <div className={`mt-5 rounded-lg border px-4 py-3 text-sm leading-7 ${sev.blocker}`}>لم يستطع الوكيل استخراج أي بيانات من هذا الملف، رغم أن النموذج أعطى نسبة ثقة. لا تعتمد هذه النتيجة. جرّب صورة أوضح وأقل ميلاناً، أو أعد المحاولة بعد قليل، ثم افتح تبويب «السجل والأنشطة» لمعرفة أي نموذج أجاب.</div>;
   }
+  if (Array.isArray(o.tests)) return <MedicalResult o={o} conf={conf} warnings={warnings} color={color} review={!!data.needs_human_review} />;
   const rows: [string, string][] = isContract
     ? [['القانون الحاكم', o.governing_law], ['الاختصاص', o.jurisdiction], ['النوع', o.contract_type]]
     : [['المورد', o.vendor_name], ['رقم الفاتورة', o.invoice_number], ['التاريخ', o.invoice_date], ['الإجمالي', `${o.total ?? ''} ${o.currency ?? ''}`.trim()], ['التصنيف', o.category], ['القيد المقترح', o.suggested_journal_entry?.debit_account && `مدين: ${o.suggested_journal_entry.debit_account}`]]
@@ -194,7 +197,7 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
       if (isEmptyOut(o)) return;
       cacheSet(ck, d);
       const run: Run = { id: String(Date.now()), clientId, agent: cur.slug, file: file.name, confidence: d.confidence_score ?? 0, at: new Date().toISOString(),
-        summary: Array.isArray(o.clauses) ? `${o.clauses.length} بند · ${o.contract_type ?? ''}` : `${o.vendor_name ?? ''} · ${o.total ?? ''} ${o.currency ?? ''}` };
+        summary: Array.isArray(o.tests) ? `${o.tests.length} فحص · ${o.document_type ?? ''}` : Array.isArray(o.clauses) ? `${o.clauses.length} بند · ${o.contract_type ?? ''}` : `${o.vendor_name ?? ''} · ${o.total ?? ''} ${o.currency ?? ''}` };
       const nr = [run, ...runs].slice(0, 200); setRuns(nr); save(KEY_R, nr);
     } catch (e) {
       const aborted = e instanceof Error && e.name === 'AbortError';

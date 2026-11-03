@@ -42,4 +42,39 @@ export const SAMPLES: Record<string, { label: string; file: string; data: Record
       },
     },
   },
+  'lab-summarizer': {
+    label: 'تقرير طبي (مثال)',
+    file: 'sample_lab_report.pdf',
+    data: {
+      confidence_score: 0.93,
+      needs_human_review: true,
+      warnings: ['هذا مثال تجريبي بقيم افتراضية وليس تقريراً حقيقياً.'],
+      output: {
+        document_type: 'تحليل دم عام (مثال)',
+        report_date: '2026-10-20',
+        patient: { age: '35', sex: 'ذكر' },
+        tests: [
+          { name: 'Hemoglobin', value: '11.2', unit: 'g/dL', reference_range: '13.5 - 17.5', status: 'low', note: '' },
+          { name: 'WBC', value: '7.1', unit: '10^3/uL', reference_range: '4.5 - 11.0', status: 'normal', note: '' },
+          { name: 'Platelets', value: '255', unit: '10^3/uL', reference_range: '150 - 450', status: 'normal', note: '' },
+          { name: 'Fasting Glucose', value: '118', unit: 'mg/dL', reference_range: '70 - 99', status: 'high', note: '' },
+          { name: 'Creatinine', value: '0.9', unit: 'mg/dL', reference_range: '0.7 - 1.3', status: 'normal', note: '' },
+        ],
+        key_findings: [
+          'قيمة الهيموغلوبين أقل من المجال المرجعي المكتوب في التقرير.',
+          'سكر الدم الصيامي أعلى من المجال المرجعي المكتوب.',
+          'بقية الفحوص المذكورة ضمن المجال المرجعي.',
+        ],
+        summary: 'يضم التقرير خمسة فحوص: قيمتان خارج المجال المرجعي (الهيموغلوبين منخفض وسكر الدم الصيامي مرتفع)، والفحوص الثلاثة الأخرى ضمن المجال. هذا ملخص لما كُتب في التقرير فقط، وتفسير هذه القيم من اختصاص الطبيب المعالج.',
+        questions_for_doctor: [
+          'هل يلزم إعادة فحص الهيموغلوبين أو إضافة فحوص أخرى؟',
+          'هل تحتاج قيمة السكر الصيامي إلى متابعة أو فحص تأكيدي؟',
+          'هل لنمط حياتي أو أدويتي الحالية علاقة بهذه القيم؟',
+        ],
+        attention_level: 'soon',
+        attention_note: 'يُنصح بعرض التقرير على الطبيب المعالج لتقييم القيم الخارجة عن المجال.',
+        disclaimer: 'هذا تلخيص آلي لما ورد في التقرير وليس رأياً طبياً ولا بديلاً عن استشارة الطبيب.',
+      },
+    },
+  },
 };

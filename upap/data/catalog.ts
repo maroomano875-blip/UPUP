@@ -18,7 +18,7 @@ export const PROFESSIONS: Profession[] = [
   P('law', 'القانون', 'Law', '⚖️', '#be4b5f', 'document_viewer', 'عقود، مذكرات، بحث قانوني، تحليل مخاطر.',
     ['صياغة المذكرات', 'بحث قانوني'],
     [{ slug: 'contract-reviewer', name_ar: 'مراجع العقود', desc_ar: 'يحلل العقد ويستخرج البنود الخطرة ويقترح تعديلات؛ يتطلب موافقة بشرية قبل التسليم.', href: '/professions/law?agent=contract-reviewer', needsApproval: true }]),
-  P('medicine', 'الطب', 'Medicine', '🩺', '#14b8a6', 'timeline', 'ملخصات سريرية، ترميز تشخيصي، متابعة المريض.', ['ملخص سريري']),
+  P('medicine', 'الطب', 'Medicine', '🩺', '#14b8a6', 'timeline', 'ملخصات سريرية، ترميز تشخيصي، متابعة المريض.', [], [{ slug: 'lab-summarizer', name_ar: 'ملخّص التقارير الطبية', desc_ar: 'يلخّص التحاليل والتقارير الطبية بلغة مبسّطة، ويبرز القيم الخارجة عن المجال، ويقترح أسئلة للطبيب — دون تشخيص ودون علاج.', href: '/professions/medicine?agent=lab-summarizer', needsApproval: true }]),
   P('engineering', 'الهندسة', 'Engineering', '📐', '#f97316', 'dashboard', 'مواصفات، حساب كميات، مراجعة مخططات.', ['حساب كميات']),
   P('education', 'التعليم', 'Education', '🎓', '#eab308', 'kanban', 'مناهج، اختبارات، تصحيح، خطط دروس.', ['مولّد اختبارات']),
   P('marketing', 'التسويق', 'Marketing', '📣', '#ec4899', 'kanban', 'حملات، محتوى، تحليل أداء، جمهور محلي.', ['خطة محتوى']),
