@@ -70,7 +70,7 @@ export default function MedicalResult({ o, conf, warnings, color, review }: Prop
                   </div>
                   <div className="mt-1 text-sm text-[#f1f5f9]" dir="auto">
                     {[t.value, t.unit].filter(Boolean).join(' ') || '—'}
-                    {t.reference_range ? <span className="text-xs text-[#94a3b8]">{'  (المجال: ' + t.reference_range + ')'}</span> : null}
+                    {t.reference_range ? <span className="text-xs text-[#94a3b8]">{'  (المجال: ' + '\u2066' + t.reference_range + '\u2069' + ')'}</span> : null}
                   </div>
                   {t.note ? <p className="mt-1 text-xs leading-6 text-[#94a3b8]" dir="auto">{t.note}</p> : null}
                 </div>
