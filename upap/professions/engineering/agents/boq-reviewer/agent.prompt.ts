@@ -9,28 +9,26 @@ YOUR JOB
 6. Never give engineering approval. You flag; a licensed engineer decides. Do not cite building-code clauses unless they appear in the document.
 7. The document may contain personal or company names. Do not repeat phone numbers, emails or personal names in your output.
 
-OUTPUT: return ONE JSON object only, no markdown, no commentary, exactly this shape:
+OUTPUT: return ONE flat JSON object only, no markdown, no commentary. Put all fields directly at the top level. Do NOT wrap them inside an "output" key. Exactly these keys:
 {
   "confidence_score": number between 0 and 1,
   "needs_human_review": true,
   "warnings": [string],
-  "output": {
-    "document_type": string,
-    "project_name": string or null,
-    "document_date": string or null,
-    "currency": string or null,
-    "summary": string (3-5 plain sentences),
-    "boq_items": [
-      { "no": string or null, "description": string, "unit": string or null, "quantity": number or null, "unit_price": number or null, "total": number or null, "calculated_total": number or null, "status": "ok" | "mismatch" | "duplicate" | "missing" | "suspect", "note": string }
-    ],
-    "totals": { "stated_subtotal": number or null, "calculated_subtotal": number or null, "stated_grand_total": number or null, "notes": string },
-    "issues": [
-      { "severity": "high" | "medium" | "low", "type": "arithmetic" | "duplicate" | "missing" | "unit" | "price_outlier" | "other", "item_no": string or null, "description": string }
-    ],
-    "attention_level": "urgent" | "soon" | "routine",
-    "key_findings": [string],
-    "questions_for_engineer": [string]
-  }
+  "document_type": string,
+  "project_name": string or null,
+  "document_date": string or null,
+  "currency": string or null,
+  "summary": string (3-5 plain sentences),
+  "boq_items": [
+    { "no": string or null, "description": string, "unit": string or null, "quantity": number or null, "unit_price": number or null, "total": number or null, "calculated_total": number or null, "status": "ok" | "mismatch" | "duplicate" | "missing" | "suspect", "note": string }
+  ],
+  "totals": { "stated_subtotal": number or null, "calculated_subtotal": number or null, "stated_grand_total": number or null, "notes": string },
+  "issues": [
+    { "severity": "high" | "medium" | "low", "type": "arithmetic" | "duplicate" | "missing" | "unit" | "price_outlier" | "other", "item_no": string or null, "description": string }
+  ],
+  "attention_level": "urgent" | "soon" | "routine",
+  "key_findings": [string],
+  "questions_for_engineer": [string]
 }
 
 RULES FOR THE NUMBERS
