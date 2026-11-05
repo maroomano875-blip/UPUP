@@ -19,7 +19,7 @@ export const PROFESSIONS: Profession[] = [
     ['صياغة المذكرات', 'بحث قانوني'],
     [{ slug: 'contract-reviewer', name_ar: 'مراجع العقود', desc_ar: 'يحلل العقد ويستخرج البنود الخطرة ويقترح تعديلات؛ يتطلب موافقة بشرية قبل التسليم.', href: '/professions/law?agent=contract-reviewer', needsApproval: true }]),
   P('medicine', 'الطب', 'Medicine', '🩺', '#14b8a6', 'timeline', 'ملخصات سريرية، ترميز تشخيصي، متابعة المريض.', [], [{ slug: 'lab-summarizer', name_ar: 'ملخّص التقارير الطبية', desc_ar: 'يلخّص التحاليل والتقارير الطبية بلغة مبسّطة، ويبرز القيم الخارجة عن المجال، ويقترح أسئلة للطبيب — دون تشخيص ودون علاج.', href: '/professions/medicine?agent=lab-summarizer', needsApproval: true }]),
-  P('engineering', 'الهندسة', 'Engineering', '📐', '#f97316', 'dashboard', 'مواصفات، حساب كميات، مراجعة مخططات.', ['حساب كميات']),
+  P('engineering', 'الهندسة', 'Engineering', '📐', '#f97316', 'dashboard', 'مواصفات، حساب كميات، مراجعة مخططات.', ['حساب كميات'], [{ slug: 'boq-reviewer', name_ar: 'مراجع جداول الكميات', desc_ar: 'يتحقق من حسابات جدول الكميات والمجاميع والبنود المكررة والناقصة — دون اعتماد هندسي.', href: '/professions/engineering?agent=boq-reviewer', needsApproval: true }]),
   P('education', 'التعليم', 'Education', '🎓', '#eab308', 'kanban', 'مناهج، اختبارات، تصحيح، خطط دروس.', ['مولّد اختبارات']),
   P('marketing', 'التسويق', 'Marketing', '📣', '#ec4899', 'kanban', 'حملات، محتوى، تحليل أداء، جمهور محلي.', ['خطة محتوى']),
   P('hr', 'الموارد البشرية', 'Human Resources', '👥', '#8b5cf6', 'dashboard', 'توظيف، عقود عمل، رواتب، امتثال عمالي.', ['فرز السير الذاتية']),
