@@ -63,6 +63,35 @@ export async function createAgent(config: AgentConfig) {
       const db = getDB();
       const start = Date.now();
 
+        // ضمان وجود صف الوكيل في جدول agents (يمنع خطأ FK للوكلاء الجدد)
+        try {
+          const __c = config as any;
+          const { data: __ag } = await db.from("agents").select("id").eq("id", config.id).maybeSingle();
+          if (!__ag) {
+            const __slug = String(config.id).split(".")[0];
+            const { data: __prof } = await db.from("professions").select("id").eq("slug", __slug).maybeSingle();
+            if (__prof) {
+              await db.from("agents").upsert({
+                id: config.id,
+                profession_id: __prof.id,
+                name: __c.name ?? __c.name_ar ?? config.id,
+                name_ar: __c.name_ar ?? config.id,
+                type: __c.type ?? "agent",
+                version: "1.0.0",
+                status: "active",
+                supported_countries: __c.supported_countries ?? [],
+                supported_languages: __c.supported_languages ?? [],
+                supported_currencies: [],
+                input_types: __c.input_types ?? [],
+                confidence_threshold: __c.confidence_threshold ?? 0.8,
+                is_active: true,
+              }, { onConflict: "id" });
+            }
+          }
+        } catch (e) {
+          console.error("[createAgent] ensure agent row failed", e);
+        }
+
       // 1️⃣ إنشاء سجل الطلب (received)
       const { data: reqRow, error: reqErr } = await db
         .from("requests")
@@ -145,10 +174,19 @@ export async function createAgent(config: AgentConfig) {
             throw new Error("فشل تحليل JSON. النموذج=" + String(cur.model ?? "?") + " | بداية الرد: " + String(cur.text ?? "").slice(0, 200).replace(/\s+/g, " "));
           }
           rawOutput = best;
+          {
+            const __inner = (rawOutput as any).output;
+            const __allowed = ["output", "confidence_score", "needs_human_review", "warnings"];
+            if (__inner && typeof __inner === "object" && !Array.isArray(__inner) &&
+                Object.keys(rawOutput).every((k) => __allowed.includes(k))) {
+              const { output: _drop, ...__outer } = rawOutput as any;
+              rawOutput = { ...__inner, ...__outer } as typeof rawOutput;
+            }
+          }
         }
 
         
-        const confidence = (rawOutput.confidence_score as number) ?? 0;
+        const confidence = normConf(rawOutput.confidence_score, 0);
         const needsHuman =
           config.requires_human_approval || confidence < config.confidence_threshold;
 
@@ -185,7 +223,7 @@ export async function createAgent(config: AgentConfig) {
 
         await db.from("requests").update({
           output_data: finalOutput,
-          confidence_score: finalOutput.confidence_score ?? confidence,
+          confidence_score: normConf(finalOutput.confidence_score, confidence),
           status: finalStatus,
           processing_time_ms: processingTime,
           updated_at: new Date().toISOString(),
@@ -204,7 +242,7 @@ export async function createAgent(config: AgentConfig) {
           agent_id: config.id,
           status: finalStatus,
           output: finalOutput,
-          confidence_score: (finalOutput.confidence_score as number) ?? confidence,
+          confidence_score: normConf(finalOutput.confidence_score, confidence),
           warnings: (finalOutput.warnings as string[]) ?? [],
           processing_time_ms: processingTime,
           provider_used: aiRes.provider,
@@ -230,4 +268,11 @@ export async function createAgent(config: AgentConfig) {
 // مهلة للمراجعة: إن تأخرت أو فشلت نُسلّم النتيجة الأولية دون مراجعة (تظهر في ملاحظات المراجع).
 function withTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
   return Promise.race([p.catch(() => fallback), new Promise<T>((r) => setTimeout(() => r(fallback), ms))]);
+}
+
+// يحوّل أي قيمة ثقة إلى مجال 0-1 (يقبل 0.9 أو 90)
+function normConf(v: unknown, fallback: number): number {
+  const n = Number(v);
+  if (v === null || v === undefined || !Number.isFinite(n)) return fallback;
+  return n > 1 ? Math.min(n / 100, 1) : Math.max(n, 0);
 }
