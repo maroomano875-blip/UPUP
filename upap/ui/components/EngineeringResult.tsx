@@ -93,7 +93,7 @@ export default function EngineeringResult({ o, conf, warnings, color, review }: 
       <div className={CARD}>
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-base font-semibold text-[#e2e8f0]">{o.document_type || 'جدول كميات'}</h3>
-          <span className="rounded-full border px-3 py-1 text-xs" style={{ borderColor: color, color }}>ثقة {Math.round(conf * 100)}%</span>
+          <span className="rounded-full border px-3 py-1 text-xs" style={{ borderColor: color, color }}>ثقة {Math.round(conf <= 1 ? conf * 100 : conf)}%</span>
         </div>
         {meta.length > 0 && <div className="mt-1 text-xs text-[#94a3b8]">{meta.join(' · ')}</div>}
         {o.summary && <p className="mt-3 text-sm leading-7 text-[#cbd5e1]">{o.summary}</p>}
