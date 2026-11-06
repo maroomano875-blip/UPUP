@@ -4,6 +4,7 @@ import type { Profession } from '../../data/catalog';
 import { SAMPLES } from '../../data/samples';
 import MedicalResult from './MedicalResult';
 import EngineeringResult from './EngineeringResult';
+import GenericResult from './GenericResult';
 import { COUNTRIES, LANGUAGES, VOLATILE, complianceChecks, fmtMoney, getCountry } from '../../data/countries';
 
 /* ---------- أنواع ونصوص ---------- */
@@ -71,6 +72,7 @@ function cacheSet(k: string, v: Out) {
 }
 
 function isEmptyOut(o: Out): boolean {
+  if (Array.isArray(o.sections)) return o.sections.length === 0 && !o.summary;
   if (Array.isArray(o.boq_items)) return o.boq_items.length === 0 && !o.summary;
   if (Array.isArray(o.tests)) return o.tests.length === 0 && !o.summary;
   if (Array.isArray(o.clauses)) return o.clauses.length === 0 && !o.executive_summary_ar;
@@ -100,6 +102,7 @@ function Result({ data, color }: { data: Out; color: string }) {
   if (isEmptyOut(o)) {
     return <div className={`mt-5 rounded-lg border px-4 py-3 text-sm leading-7 ${sev.blocker}`}>لم يستطع الوكيل استخراج أي بيانات من هذا الملف، رغم أن النموذج أعطى نسبة ثقة. لا تعتمد هذه النتيجة. جرّب صورة أوضح وأقل ميلاناً، أو أعد المحاولة بعد قليل، ثم افتح تبويب «السجل والأنشطة» لمعرفة أي نموذج أجاب.</div>;
   }
+  if (Array.isArray(o.sections)) return <GenericResult o={o} conf={conf} warnings={warnings} color={color} review={!!data.needs_human_review} />;
   if (Array.isArray(o.boq_items)) return <EngineeringResult o={o} conf={conf} warnings={warnings} color={color} review={!!data.needs_human_review} />;
   if (Array.isArray(o.tests)) return <MedicalResult o={o} conf={conf} warnings={warnings} color={color} review={!!data.needs_human_review} />;
   const rows: [string, string][] = isContract
@@ -200,7 +203,7 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
       if (isEmptyOut(o)) return;
       cacheSet(ck, d);
       const run: Run = { id: String(Date.now()), clientId, agent: cur.slug, file: file.name, confidence: d.confidence_score ?? 0, at: new Date().toISOString(),
-        summary: Array.isArray(o.boq_items) ? `${o.boq_items.length} items` : Array.isArray(o.tests) ? `${o.tests.length} فحص · ${o.document_type ?? ''}` : Array.isArray(o.clauses) ? `${o.clauses.length} بند · ${o.contract_type ?? ''}` : `${o.vendor_name ?? ''} · ${o.total ?? ''} ${o.currency ?? ''}` };
+        summary: Array.isArray(o.sections) ? `${o.sections.length} قسم · ${o.document_type ?? ''}` : Array.isArray(o.boq_items) ? `${o.boq_items.length} items` : Array.isArray(o.tests) ? `${o.tests.length} فحص · ${o.document_type ?? ''}` : Array.isArray(o.clauses) ? `${o.clauses.length} بند · ${o.contract_type ?? ''}` : `${o.vendor_name ?? ''} · ${o.total ?? ''} ${o.currency ?? ''}` };
       const nr = [run, ...runs].slice(0, 200); setRuns(nr); save(KEY_R, nr);
     } catch (e) {
       const aborted = e instanceof Error && e.name === 'AbortError';
