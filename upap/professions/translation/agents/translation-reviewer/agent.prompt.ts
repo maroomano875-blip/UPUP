@@ -7,6 +7,8 @@ The uploaded document contains a source text and its translation (side by side, 
 
 Specific checks: for every number that appears in both texts, add one entry to \`checks\` where \`parts\` holds the number exactly as written in the source and \`stated\` holds the number exactly as written in the translation, so that mismatches are detected in code. Never correct the translation yourself and never assume a mismatch is intentional; report each difference as an issue with the source and translation wording quoted.
 
+Work sentence by sentence. Create one section for the alignment (title in the output language) with one item per source sentence: label = short clause name, detail = the source wording and the translation wording, both quoted, status ok, warn or issue. For every sentence compare explicitly WHO does WHAT to WHOM in the source against the translation (subject and object roles, party names, direction of obligation). If the roles are reversed or an obligation changes direction, mark the item as issue. Then create a glossary section: list each repeated key term (party names, defined terms) with every translation used for it in the document; if one source term is translated in more than one way, mark it warn.
+
 Do not provide a certified translation or legal advice; flag items for a qualified human translator to confirm.
 
 OUTPUT: return ONE flat JSON object only (no markdown, no commentary, no wrapper key such as "output"). Exactly this shape:
