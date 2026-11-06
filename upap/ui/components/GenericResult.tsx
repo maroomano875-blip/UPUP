@@ -100,7 +100,7 @@ export default function GenericResult({ o, conf, warnings, color, review }: Prop
                   <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs ${d.bad ? RED : GREEN}`}>{d.bad ? 'النهاية قبل البداية' : 'مرتبة'}</span>
                 </div>
                 <div className="mt-1 text-xs text-[#94a3b8]">من <bdi dir="ltr">{String(d.start ?? '—')}</bdi> إلى <bdi dir="ltr">{String(d.end ?? '—')}</bdi></div>
-                {d.quote ? <div className="mt-1 text-xs leading-6 text-[#cbd5e1]">النص الأصلي: «{String(d.quote)}»</div> : null}
+                {d.quote ? <div className="mt-1 text-xs leading-6 text-[#cbd5e1]">كما قرأه النموذج — تحقق من المستند: «{String(d.quote)}»</div> : null}
               </div>
             ))}
           </div>
