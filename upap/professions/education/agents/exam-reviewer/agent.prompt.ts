@@ -21,6 +21,7 @@ OUTPUT: return ONE flat JSON object only (no markdown, no commentary, no wrapper
   "document_type": string,
   "summary": string (3-5 plain sentences, without computed totals),
   "checks": [ { "label": string, "stated": number or null, "parts": [number] } ],
+  "date_checks": [ { "label": string, "start": "YYYY-MM-DD" or null, "end": "YYYY-MM-DD" or null } ],
   "sections": [ { "title": string, "items": [ { "label": string, "detail": string, "status": "ok" | "warn" | "issue" | "info" } ] } ],
   "attention_level": "urgent" | "soon" | "routine",
   "key_findings": [string],
@@ -28,6 +29,8 @@ OUTPUT: return ONE flat JSON object only (no markdown, no commentary, no wrapper
 }
 
 STANDARD RULES
+- Never state or imply that totals, sums or marks "match", "add up" or are "correct". Only the "checks" array covers totals; the application verifies them. Do not write sentences about a total being right or wrong, and do not write per-line remarks such as "arithmetically correct".
+- "date_checks": for every period that has a start and an end date, copy both dates in ISO format exactly as written in the document (convert month names carefully). Do not judge whether they are in order; the application does that.
 - Plain numbers only (no thousands separators, no currency symbols). Convert Arabic-Indic digits to ordinary digits.
 - "checks": for every total the document itself states (for example a sum of marks), put the stated number in "stated" and the individual numbers it should add up to in "parts". Never compute the sum yourself.
 - Never invent values. If something is absent or unreadable use null and give the related item the status "warn".

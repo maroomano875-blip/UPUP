@@ -42,7 +42,13 @@ export default function GenericResult({ o, conf, warnings, color, review }: Prop
     const bad = stated !== null && sum !== null && Math.abs(stated - sum) > Math.max(0.01, Math.abs(sum) * 0.005);
     return { label: c.label, stated, sum, bad };
   });
-  const badChecks = checks.filter((c: any) => c.bad).length;
+  const dateChecks = (Array.isArray(o.date_checks) ? o.date_checks : []).map((d: any) => {
+    const a = Date.parse(String(d.start));
+    const b = Date.parse(String(d.end));
+    const bad = Number.isFinite(a) && Number.isFinite(b) && a > b;
+    return { label: d.label, start: d.start, end: d.end, bad };
+  });
+  const badChecks = checks.filter((c: any) => c.bad).length + dateChecks.filter((d: any) => d.bad).length;
 
   const base = ATTENTION[String(o.attention_level)] ?? ATTENTION.routine;
   const att = badChecks > 0 && base === ATTENTION.routine ? ATTENTION.soon : base;
@@ -77,6 +83,23 @@ export default function GenericResult({ o, conf, warnings, color, review }: Prop
                   <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs ${c.bad ? RED : GREEN}`}>{c.bad ? 'غير متطابق' : 'متطابق'}</span>
                 </div>
                 <div className="mt-1 text-xs text-[#94a3b8]">المعلن: <Num v={c.stated} /> · المحسوب: <Num v={c.sum} /></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {dateChecks.length > 0 && (
+        <div className={CARD}>
+          <h3 className="mb-3 text-sm font-semibold text-[#e2e8f0]">فحص التواريخ</h3>
+          <div className="space-y-2 text-sm text-[#cbd5e1]">
+            {dateChecks.map((d: any, i: number) => (
+              <div key={i} className="rounded-lg border border-[rgba(255,255,255,0.08)] px-3 py-2">
+                <div className="flex items-start justify-between gap-2">
+                  <span>{d.label}</span>
+                  <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs ${d.bad ? RED : GREEN}`}>{d.bad ? 'النهاية قبل البداية' : 'مرتبة'}</span>
+                </div>
+                <div className="mt-1 text-xs text-[#94a3b8]">من <bdi dir="ltr">{String(d.start ?? '—')}</bdi> إلى <bdi dir="ltr">{String(d.end ?? '—')}</bdi></div>
               </div>
             ))}
           </div>
