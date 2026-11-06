@@ -26,7 +26,7 @@ export const PROFESSIONS: Profession[] = [
   P('real_estate', 'العقارات', 'Real Estate', '🏠', '#c2813f', 'dashboard', 'تقييم، عقود إيجار، تسويق وحدات.', ['مراجع عقود الإيجار']),
   P('insurance', 'التأمين', 'Insurance', '🛡️', '#4f6bed', 'document_viewer', 'مطالبات، وثائق، تقدير مخاطر.', ['فرز المطالبات'], [{ slug: 'policy-reviewer', name_ar: 'مراجع وثائق التأمين', desc_ar: 'يراجع وثائق التأمين: الأقساط، الدفعات، حدود التغطية، التناقض بين الشمول والاستثناءات', href: '/professions/insurance?agent=policy-reviewer', needsApproval: true }]),
   P('translation', 'الترجمة', 'Translation', '🌐', '#38bdf8', 'document_viewer', 'ترجمة معتمدة، توطين، مصطلحات.', ['مترجم وثائق'], [{ slug: 'translation-reviewer', name_ar: 'مراجع الترجمة', desc_ar: 'يقارن النص الأصلي بترجمته: الحذف والإضافة، عكس الأطراف، تغيّر الأرقام، وثبات المصطلحات', href: '/professions/translation?agent=translation-reviewer', needsApproval: true }]),
-  P('programming', 'البرمجة', 'Programming', '💻', '#84cc16', 'chat', 'مراجعة كود، توثيق، اختبارات، ترحيل.', ['مراجع كود']),
+  P('programming', 'البرمجة', 'Programming', '💻', '#84cc16', 'chat', 'مراجعة كود، توثيق، اختبارات، ترحيل.', ['مراجع كود'], [{ slug: 'code-reviewer', name_ar: 'مراجع الشيفرة', desc_ar: 'يراجع الشيفرة: الثغرات الأمنية، الأخطاء المنطقية، وتعارض التوثيق مع السلوك الفعلي', href: '/professions/programming?agent=code-reviewer', needsApproval: true }]),
   P('design', 'التصميم', 'Design', '🎨', '#d946ef', 'kanban', 'هوية بصرية، مواصفات تصميم، نسخ إعلانية.', ['موجز تصميم']),
   P('ecommerce', 'التجارة الإلكترونية', 'E-commerce', '🛒', '#fb7185', 'dashboard', 'أوصاف منتجات، تسعير، خدمة عملاء.', ['كاتب أوصاف المنتجات']),
   P('logistics', 'اللوجستيات', 'Logistics', '🚚', '#f59e0b', 'timeline', 'شحن، تخليص جمركي، تتبع.', ['مستندات الشحن']),
