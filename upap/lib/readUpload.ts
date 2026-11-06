@@ -188,7 +188,25 @@ async function readUploadRaw(b: Buffer, name = '', mime = ''): Promise<ReadResul
   try {
     if (kind === 'pdf') {
       const text = await pdfText(b, warnings);
-      if (text.length >= 40) return { text: text.slice(0, MAX_TEXT), kind, warnings };
+      if (text.length >= 40) {
+        // نص PDF العربي يُستخرج غالباً بترتيب كلمات معكوس: نرفق صورة الصفحات ليقرأ النموذج الترتيب الصحيح
+        if (/[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/.test(text)) {
+          try {
+            const rtlImg = await pdfToImage(b, warnings);
+            if (rtlImg) {
+              return {
+                text: text.slice(0, MAX_TEXT) + '\n\n[ملاحظة: ترتيب الكلمات العربية في النص أعلاه قد يكون معكوساً. اعتمد الصورة المرفقة لقراءة الترتيب الصحيح، خاصة التواريخ وفترات من/إلى والأرقام.]',
+                imageBase64: rtlImg,
+                kind,
+                warnings,
+              };
+            }
+          } catch (e) {
+            warnings.push('rtl-image: ' + (e instanceof Error ? e.message : 'failed'));
+          }
+        }
+        return { text: text.slice(0, MAX_TEXT), kind, warnings };
+      }
       // ممسوح ضوئياً أو تعذّر النص: نحوّل الصفحات إلى صورة ليقرأها النموذج بالنظر
       const imageBase64 = await pdfToImage(b, warnings);
       if (imageBase64) {
