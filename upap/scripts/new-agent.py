@@ -14,7 +14,7 @@ const = agent.upper().replace('-', '_')
 aid = prof + '.' + agent
 for v in (A.name_en, A.name_ar, A.desc_ar):
     assert "'" not in v and '"' not in v, 'no quotes allowed in names/description'
-assert re.fullmatch(r'[a-z][a-z0-9-]*', prof) and re.fullmatch(r'[a-z][a-z0-9-]*', agent), 'bad slug'
+assert re.fullmatch(r'[a-z][a-z0-9_-]*', prof) and re.fullmatch(r'[a-z][a-z0-9-]*', agent), 'bad slug'
 
 task = open(A.prompt_file, encoding='utf-8').read().strip()
 assert '{country}' in task and '{language}' in task, 'prompt file must contain {country} and {language}'
