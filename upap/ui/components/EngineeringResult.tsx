@@ -59,7 +59,8 @@ export default function EngineeringResult({ o, conf, warnings, color, review }: 
     let status = String(it.status ?? 'ok');
     if (mismatch) status = 'mismatch';
     else if (dup) status = 'duplicate';
-    else if ((q === null || u === null || t === null) && status === 'ok') status = 'missing';
+    else if (q === null || u === null || t === null) status = 'missing';
+    else if (status === 'mismatch' || status === 'missing') status = 'ok';
     return { ...it, q, u, t, calc, status, dupOf: dup ? seen.get(key)! : null };
   });
 
@@ -69,6 +70,7 @@ export default function EngineeringResult({ o, conf, warnings, color, review }: 
   const subMismatch = statedSub !== null && Math.abs(statedSub - sumStated) > Math.max(0.01, Math.abs(sumStated) * 0.005);
   const localErrors = items.filter((it) => it.status === 'mismatch').length;
   const localDups = items.filter((it) => it.status === 'duplicate').length;
+  const localMissing = items.filter((it) => it.status === 'missing').length;
 
   const meta = [
     o.project_name ? 'المشروع: ' + o.project_name : '',
@@ -80,8 +82,8 @@ export default function EngineeringResult({ o, conf, warnings, color, review }: 
     <div className="mt-5 space-y-3">
       <div className={`rounded-lg border px-4 py-3 text-sm leading-7 ${att.cls}`}>
         <b>{att.ar}</b>
-        {localErrors + localDups > 0 && (
-          <span> — {localErrors > 0 ? `${localErrors} خطأ حسابي` : ''}{localErrors > 0 && localDups > 0 ? '، ' : ''}{localDups > 0 ? `${localDups} بند مكرر` : ''}</span>
+        {localErrors + localDups + localMissing > 0 && (
+          <span> — {[localErrors > 0 ? `${localErrors} خطأ حسابي` : '', localDups > 0 ? `${localDups} بند مكرر` : '', localMissing > 0 ? `${localMissing} بند ناقص` : ''].filter(Boolean).join('، ')}</span>
         )}
       </div>
 
@@ -161,7 +163,7 @@ export default function EngineeringResult({ o, conf, warnings, color, review }: 
               return (
                 <div key={i} className="flex items-start gap-2 text-sm text-[#cbd5e1]">
                   <span className={`mt-0.5 shrink-0 rounded-full border px-2 py-0.5 text-xs ${sv.cls}`}>{sv.ar}</span>
-                  <span>{is.item_no ? <b>بند {String(is.item_no)}: </b> : null}{is.description}</span>
+                  <span>{is.item_no ? <b>{/^\d+$/.test(String(is.item_no)) ? 'بند ' + String(is.item_no) : (String(is.item_no).toLowerCase() === 'total' ? 'المجموع' : String(is.item_no))}: </b> : null}{is.description}</span>
                 </div>
               );
             })}

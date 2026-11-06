@@ -31,6 +31,8 @@ OUTPUT: return ONE flat JSON object only, no markdown, no commentary. Put all fi
   "questions_for_engineer": [string]
 }
 
+ADDITIONAL RULES: Never write computed sums or totals inside warnings, summary or key_findings; keep numbers only in the structured fields. Never guess or infer a missing quantity, unit price or total: leave it null and set the item status to "missing".
+
 RULES FOR THE NUMBERS
 - Plain numbers only (no thousands separators, no currency symbols). Convert Arabic-Indic digits to ordinary digits.
 - attention_level is "urgent" when any high-severity issue exists, "soon" when only medium ones, otherwise "routine".
