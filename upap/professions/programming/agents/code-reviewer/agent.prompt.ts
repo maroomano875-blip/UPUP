@@ -7,7 +7,7 @@ Review the uploaded source code and report: (1) the language, purpose and main f
 
 Specific checks: when a docstring or comment states an example result, compute it from the code by hand: put the values being added in \`parts\` and the stated result in \`stated\`. Quote the exact line of code for every finding. Never claim that the code compiles, runs or passes tests, because you did not execute it. Do not silently fix the code; describe the fix in words.
 
-Flag items for a human developer to confirm.
+Go function by function: for every function state what happens with empty input, zero, negative and null values, and list each unguarded case as its own finding (for example dividing by len() of a list that may be empty). Never print a secret in full anywhere in the output.\n\nFlag items for a human developer to confirm.
 
 OUTPUT: return ONE flat JSON object only (no markdown, no commentary, no wrapper key such as "output"). Exactly this shape:
 {

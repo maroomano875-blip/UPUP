@@ -174,6 +174,7 @@ export async function createAgent(config: AgentConfig) {
             throw new Error("فشل تحليل JSON. النموذج=" + String(cur.model ?? "?") + " | بداية الرد: " + String(cur.text ?? "").slice(0, 200).replace(/\s+/g, " "));
           }
           rawOutput = best;
+      rawOutput = redactSecrets(rawOutput) as typeof rawOutput;
           {
             const __inner = (rawOutput as any).output;
             const __allowed = ["output", "confidence_score", "needs_human_review", "warnings"];
@@ -275,4 +276,36 @@ function normConf(v: unknown, fallback: number): number {
   const n = Number(v);
   if (v === null || v === undefined || !Number.isFinite(n)) return fallback;
   return n > 1 ? Math.min(n / 100, 1) : Math.max(n, 0);
+}
+
+
+const SECRET_PATTERNS: RegExp[] = [
+  /\b(?:sk|pk|rk)_(?:live|test)_[A-Za-z0-9_]{6,}/g,
+  /\bAKIA[0-9A-Z]{16}\b/g,
+  /\bghp_[A-Za-z0-9]{20,}/g,
+  /\bAIza[0-9A-Za-z_-]{20,}/g,
+  /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g,
+];
+
+function maskSecretsInString(t: string): string {
+  let out = t;
+  for (const re of SECRET_PATTERNS) {
+    out = out.replace(re, (m) => m.slice(0, 4) + "****");
+  }
+  out = out.replace(
+    /((?:api[_-]?key|secret|token|password|passwd)\w*\s*[=:]\s*["'])([^"']{8,})(["'])/gi,
+    (_m, a: string, v: string, c: string) => a + v.slice(0, 4) + "****" + c
+  );
+  return out;
+}
+
+function redactSecrets(v: unknown): unknown {
+  if (typeof v === "string") return maskSecretsInString(v);
+  if (Array.isArray(v)) return v.map(redactSecrets);
+  if (v && typeof v === "object") {
+    const o: Record<string, unknown> = {};
+    for (const [k, x] of Object.entries(v as Record<string, unknown>)) o[k] = redactSecrets(x);
+    return o;
+  }
+  return v;
 }
