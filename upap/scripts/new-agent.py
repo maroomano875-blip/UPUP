@@ -123,14 +123,11 @@ route_dir = 'app/api/agents/' + agent
 assert not os.path.exists(agent_dir), 'agent folder already exists: ' + agent_dir
 assert not os.path.exists(route_dir), 'route folder already exists: ' + route_dir
 
-tpl = 'app/api/agents/boq-reviewer/route.ts'
-route = open(tpl, encoding='utf-8').read()
-for old, new in [('BOQ_REVIEWER_CONFIG', const + '_CONFIG'),
-                 ('professions/engineering/agents/boq-reviewer/agent.config', agent_dir + '/agent.config'),
-                 ('[boq-reviewer API]', '[%s API]' % agent),
-                 ('مراجع جداول الكميات', A.name_ar)]:
-    assert old in route or old == 'مراجع جداول الكميات', 'route template missing: ' + old
-    route = route.replace(old, new)
+# المسار يستخدم المعالج المشترك lib/agentRoute.ts (لا نسخ من وكيل آخر)
+route = ('// مسار الوكيل: المنطق المشترك في lib/agentRoute.ts (حد الحجم، التحقق من المدخلات، رسائل خطأ عامة)\n'
+         'import { makeAgentRoute } from "../../../../lib/agentRoute";\n'
+         'import { %s_CONFIG } from "../../../../%s/agent.config";\n\n'
+         'export const POST = makeAgentRoute(%s_CONFIG, "%s");\n') % (const, agent_dir, const, agent)
 
 cp = 'data/catalog.ts'
 lines = open(cp, encoding='utf-8').read().split('\n')
