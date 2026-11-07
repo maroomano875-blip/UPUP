@@ -14,11 +14,12 @@ export async function GET(req: Request) {
   try {
     const db = createClient(url, key, { auth: { persistSession: false }, global: { fetch: (u: RequestInfo | URL, i?: RequestInit) => fetch(u, { ...i, cache: 'no-store' }) } });
     const au = await db.from('audit_log').select('*').order('created_at', { ascending: false }).limit(16);
-    const skip = new Set(['id', 'created_at', 'request_id', 'client_id', 'event', 'action', 'type']);
+    // قائمة مسموحة: حقول تقنية فقط. لا هوية عميل ولا معرّفات ولا نصوص أخطاء (قد تحوي مقاطع من مستندات).
+    const SAFE = ['provider', 'model', 'latency', 'time_ms', 'confidence', 'needs_human', 'reviewer_notes'];
     const audit = (au.data ?? []).map((r: Record<string, unknown>) => ({
       at: String(r.created_at ?? ''),
       event: String(r.event ?? r.action ?? r.type ?? ''),
-      detail: JSON.stringify(Object.fromEntries(Object.entries(r).filter(([k, v]) => !skip.has(k) && v != null))).slice(0, 260),
+      detail: JSON.stringify(Object.fromEntries(Object.entries((r.metadata ?? {}) as Record<string, unknown>).filter(([k, v]) => SAFE.includes(k) && v != null))).slice(0, 260),
     }));
     const { data, error } = await db.from('requests').select('*').order('created_at', { ascending: false }).limit(60);
     if (error) return NextResponse.json({ connected: false, rows: [] });
