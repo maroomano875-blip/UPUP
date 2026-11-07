@@ -1,4 +1,5 @@
 import React from 'react';
+import { toNum, verifyChecks, verifyDates } from '../../lib/verify';
 
 type Props = { o: Record<string, any>; conf: number; warnings: string[]; color: string; review: boolean };
 
@@ -21,11 +22,6 @@ const ATTENTION: Record<string, { ar: string; cls: string }> = {
 };
 const DISCLAIMER = 'هذا فحص آلي مساعد وليس رأياً مهنياً نهائياً؛ المراجعة النهائية للمختص.';
 
-const toNum = (v: any): number | null => {
-  if (v === null || v === undefined || v === '') return null;
-  const n = typeof v === 'number' ? v : Number(String(v).replace(/[,\s]/g, ''));
-  return Number.isFinite(n) ? n : null;
-};
 const fmt = (n: number | null): string => (n === null ? '—' : n.toLocaleString('en-US', { maximumFractionDigits: 2 }));
 const Num = ({ v }: { v: number | null }) => <bdi dir="ltr">{fmt(v)}</bdi>;
 
@@ -35,19 +31,8 @@ export default function GenericResult({ o, conf, warnings, color, review }: Prop
   const questions: string[] = Array.isArray(o.questions_for_user) ? o.questions_for_user : [];
 
   // الأرقام تُجمع وتُقارن بالكود، لا بحساب النموذج
-  const checks = (Array.isArray(o.checks) ? o.checks : []).map((c: any) => {
-    const stated = toNum(c.stated);
-    const parts: number[] = Array.isArray(c.parts) ? c.parts.map((p: any) => toNum(p)).filter((n: number | null): n is number => n !== null) : [];
-    const sum = parts.length ? Math.round(parts.reduce((a: number, b: number) => a + b, 0) * 100) / 100 : null;
-    const bad = stated !== null && sum !== null && Math.abs(stated - sum) > Math.max(0.01, Math.abs(sum) * 0.005);
-    return { label: c.label, stated, sum, bad };
-  });
-  const dateChecks = (Array.isArray(o.date_checks) ? o.date_checks : []).map((d: any) => {
-    const a = Date.parse(String(d.start));
-    const b = Date.parse(String(d.end));
-    const bad = Number.isFinite(a) && Number.isFinite(b) && a > b;
-    return { label: d.label, quote: d.quote, start: d.start, end: d.end, bad };
-  });
+  const checks = verifyChecks(o.checks);
+  const dateChecks = verifyDates(o.date_checks);
   const badChecks = checks.filter((c: any) => c.bad).length + dateChecks.filter((d: any) => d.bad).length;
 
   const base = ATTENTION[String(o.attention_level)] ?? ATTENTION.routine;
