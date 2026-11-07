@@ -150,7 +150,7 @@ export async function createAgent(config: AgentConfig) {
           let bestScore = -1;
           for (let attempt = 0; attempt < 2; attempt++) {
             try {
-              const obj = extractJSON(cur.text) as Record<string, unknown>;
+              const obj = unwrapOutput(extractJSON(cur.text));
               const __sec = (obj as any).sections;
               const __cnt = (x: unknown) => (Array.isArray(x) ? x.length : 0);
               const __weak = Array.isArray(__sec) &&
@@ -319,7 +319,9 @@ function redactSecrets(v: unknown): unknown {
 
 
 // يفكّ غلاف {output:{...}} إن لفّ النموذج النتيجة به (نفس منطق نتيجة الاستخراج الأولى)
-function unwrapOutput(o: Record<string, unknown>): Record<string, unknown> {
+function unwrapOutput(o0: unknown): Record<string, unknown> {
+  // بعض النماذج تُرجع مصفوفة فيها كائن واحد بدل الكائن نفسه
+  const o = (Array.isArray(o0) && o0.length > 0 && o0[0] && typeof o0[0] === "object" ? o0[0] : o0) as Record<string, unknown>;
   const inner = (o as any).output;
   const allowed = ["output", "confidence_score", "needs_human_review", "warnings"];
   if (inner && typeof inner === "object" && !Array.isArray(inner) && Object.keys(o).every((k) => allowed.includes(k))) {
