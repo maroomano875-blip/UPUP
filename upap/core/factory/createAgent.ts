@@ -209,8 +209,8 @@ export async function createAgent(config: AgentConfig) {
         let reviewerNotes = "تمت المراجعة";
         try {
           {
-          const rv = extractJSON(reviewRes.text) as Record<string, unknown>;
-          if (leafScore(rv) >= leafScore(rawOutput) * 0.6) finalOutput = rv;
+          const rv = unwrapOutput(extractJSON(reviewRes.text) as Record<string, unknown>);
+          if (leafScore(rv) >= leafScore(rawOutput) * 0.6 && (!Array.isArray(rawOutput.sections) || Array.isArray(rv.sections))) finalOutput = rv;
           else reviewerNotes = "تجاهلنا تعديل المراجع لأنه أفرغ البيانات";
         }
         } catch {
@@ -315,4 +315,16 @@ function redactSecrets(v: unknown): unknown {
     return o;
   }
   return v;
+}
+
+
+// يفكّ غلاف {output:{...}} إن لفّ النموذج النتيجة به (نفس منطق نتيجة الاستخراج الأولى)
+function unwrapOutput(o: Record<string, unknown>): Record<string, unknown> {
+  const inner = (o as any).output;
+  const allowed = ["output", "confidence_score", "needs_human_review", "warnings"];
+  if (inner && typeof inner === "object" && !Array.isArray(inner) && Object.keys(o).every((k) => allowed.includes(k))) {
+    const { output: _drop, ...outer } = o as any;
+    return { ...inner, ...outer };
+  }
+  return o;
 }
