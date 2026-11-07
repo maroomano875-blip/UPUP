@@ -151,7 +151,14 @@ export async function createAgent(config: AgentConfig) {
           for (let attempt = 0; attempt < 2; attempt++) {
             try {
               const obj = extractJSON(cur.text) as Record<string, unknown>;
-              const sc = leafScore(obj);
+              const __sec = (obj as any).sections;
+              const __cnt = (x: unknown) => (Array.isArray(x) ? x.length : 0);
+              const __weak = Array.isArray(__sec) &&
+                __sec.reduce((a: number, x: any) => a + __cnt(x?.items), 0) === 0 &&
+                __cnt((obj as any).checks) === 0 && __cnt((obj as any).key_findings) === 0 &&
+                __cnt((obj as any).date_checks) === 0;
+              // رد بلا أقسام ولا فحوصات ولا ملاحظات يُعدّ ضعيفاً فيُعاد بنموذج آخر
+              const sc = __weak ? Math.min(leafScore(obj), 2) : leafScore(obj);
               if (sc > bestScore) { best = obj; bestScore = sc; }
               const shortDoc = input.extractedText.trim().length < 40 && !input.imageBase64;
               if (sc >= 3 || shortDoc) break;
