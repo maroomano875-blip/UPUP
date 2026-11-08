@@ -43,7 +43,8 @@ function buildPrompt(config: AgentConfig, input: RunAgentInput): string {
   return config.system_prompt_template
     .replace("{country}", input.country)
     .replace("{language}", input.language)
-    .replace("{context}", JSON.stringify(input.context ?? {}));
+    .replace("{context}", JSON.stringify(input.context ?? {})) +
+    `\n\nToday's date is ${new Date().toISOString().slice(0, 10)}. Only call a document date "in the future" if it is later than today's date.`;
 }
 
 // ── تحديث حالة الطلب في قاعدة البيانات ──────────────────
