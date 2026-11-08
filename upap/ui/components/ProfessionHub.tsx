@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import type { Profession } from '../../data/catalog';
-import { SAMPLES } from '../../data/samples';
+import { SAMPLES, sampleLang } from '../../data/samples';
 import MedicalResult from './MedicalResult';
 import EngineeringResult from './EngineeringResult';
 import GenericResult from './GenericResult';
@@ -182,8 +182,9 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
   }, [st]);
 
   function runSample() {
-    const sm = SAMPLES[agent]; if (!sm) return;
-    setErr(''); setBadge(`نتيجة تجريبية محفوظة: ${sm.label}. لم يُستدعَ أي نموذج.`); setRes(sm.data); setSt('done');
+    const sl = sampleLang(lang);
+    const sm = SAMPLES[agent]?.[sl]; if (!sm) return;
+    setErr(''); setBadge(sl === 'ar' ? `نتيجة تجريبية محفوظة: ${sm.label}. لم يُستدعَ أي نموذج.` : `Saved demo result: ${sm.label}. No model was called.`); setRes(sm.data); setSt('done');
   }
 
   async function run() {
@@ -289,7 +290,7 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
                   </button>
                   {SAMPLES[agent] && (
                     <button type="button" onClick={runSample} className="mt-3 w-full rounded-lg border px-4 py-2.5 text-sm font-semibold"
-                      style={{ borderColor: p.color, color: p.color }}>⚡ جرّب مثالاً جاهزاً (فوري): {SAMPLES[agent].label}</button>
+                      style={{ borderColor: p.color, color: p.color }}>⚡ {sampleLang(lang) === 'ar' ? 'جرّب مثالاً جاهزاً (فوري)' : 'Try a ready example (instant)'}: {SAMPLES[agent][sampleLang(lang)].label}</button>
                   )}
                   {st === 'done' && badge && <div className={`mt-4 rounded-lg border px-4 py-2 text-xs ${sev.info}`}>{badge}</div>}
                   {st === 'error' && <div className={`mt-4 rounded-lg border px-4 py-3 text-sm leading-7 ${sev.blocker}`} dir="auto">⚠ {err}</div>}
