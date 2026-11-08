@@ -30,3 +30,32 @@ export function verifyDates(raw: unknown): DateRow[] {
     return { label: d?.label, quote: d?.quote, start: d?.start, end: d?.end, bad };
   });
 }
+
+const near = (a: number, b: number) => Math.abs(a - b) <= Math.max(0.01, Math.abs(b) * 0.005);
+const r2 = (n: number) => Math.round(n * 100) / 100;
+
+// بنود الفاتورة: الكمية × السعر = إجمالي البند، ومجموع البنود = المجموع الفرعي
+export function invoiceItemIssues(o: any): string[] {
+  const out: string[] = [];
+  const items = Array.isArray(o?.line_items) ? o.line_items : [];
+  const tots: number[] = [];
+  items.forEach((it: any, i: number) => {
+    const q = toNum(it?.quantity), u = toNum(it?.unit_price), t = toNum(it?.total);
+    if (t !== null) tots.push(t);
+    if (q && u && t !== null && !near(q * u, t)) out.push(`البند ${i + 1}: ${q} × ${u} = ${r2(q * u)} لكن المكتوب ${t}`);
+  });
+  const sub = toNum(o?.subtotal);
+  const s = r2(tots.reduce((a, b) => a + b, 0));
+  if (tots.length && sub && !near(s, sub)) out.push(`مجموع البنود ${s} لا يساوي المجموع الفرعي ${sub}`);
+  return out;
+}
+
+// الإجمالي = المجموع الفرعي + الضريبة، وتاريخ الاستحقاق لا يسبق تاريخ الفاتورة
+export function verifyInvoice(o: any): string[] {
+  const out = invoiceItemIssues(o);
+  const sub = toNum(o?.subtotal), tax = toNum(o?.tax) ?? 0, tot = toNum(o?.total);
+  if (sub && tot && !near(sub + tax, tot)) out.push(`${sub} + ${tax} = ${r2(sub + tax)} لكن الإجمالي المكتوب ${tot}`);
+  const a = Date.parse(String(o?.invoice_date)), b = Date.parse(String(o?.due_date));
+  if (Number.isFinite(a) && Number.isFinite(b) && b < a) out.push('تاريخ الاستحقاق يسبق تاريخ الفاتورة');
+  return out;
+}

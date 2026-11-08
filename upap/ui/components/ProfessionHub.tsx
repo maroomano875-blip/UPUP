@@ -5,6 +5,7 @@ import { SAMPLES } from '../../data/samples';
 import MedicalResult from './MedicalResult';
 import EngineeringResult from './EngineeringResult';
 import GenericResult from './GenericResult';
+import { verifyInvoice } from '../../lib/verify';
 import { COUNTRIES, LANGUAGES, VOLATILE, complianceChecks, fmtMoney, getCountry } from '../../data/countries';
 
 /* ---------- أنواع ونصوص ---------- */
@@ -109,6 +110,7 @@ function Result({ data, color }: { data: Out; color: string }) {
     ? [['القانون الحاكم', o.governing_law], ['الاختصاص', o.jurisdiction], ['النوع', o.contract_type]]
     : [['المورد', o.vendor_name], ['رقم الفاتورة', o.invoice_number], ['التاريخ', o.invoice_date], ['الإجمالي', `${o.total ?? ''} ${o.currency ?? ''}`.trim()], ['التصنيف', o.category], ['القيد المقترح', o.suggested_journal_entry?.debit_account && `مدين: ${o.suggested_journal_entry.debit_account}`]]
       .map(([a, b]) => [a as string, b as string]);
+  const codeIssues = isContract ? [] : verifyInvoice(o);
   return (
     <div className="mt-5 space-y-3">
       {data.needs_human_review && <div className="rounded-lg border border-[rgba(245,158,11,0.4)] bg-[rgba(245,158,11,0.1)] px-4 py-3 text-sm text-[#fcd34d]">يحتاج هذا التحليل مراجعة مختص قبل أي قرار.</div>}
@@ -129,6 +131,9 @@ function Result({ data, color }: { data: Out; color: string }) {
           <p className="mt-1 text-xs leading-6 opacity-90">التوصية: {c.recommendation}</p>
         </div>
       ))}
+      {codeIssues.length > 0 && (
+        <ul className="space-y-1">{codeIssues.map((w, i) => <li key={i} className={`rounded-lg border px-3 py-2 text-sm ${sev.blocker}`}>فحص آلي بالكود: {w}</li>)}</ul>
+      )}
       {warnings.length > 0 && (
         <ul className="space-y-1">{warnings.map((w, i) => <li key={i} className={`rounded-lg border px-3 py-2 text-sm ${sev.warning}`}>{w}</li>)}</ul>
       )}
