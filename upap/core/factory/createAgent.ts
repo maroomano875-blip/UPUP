@@ -2,6 +2,7 @@
 // مصنع الوكلاء — createAgent()
 // تمرير الإعدادات → وكيل جاهز يمر بدورة المعالجة الكاملة
 // ==========================================================
+import { countryDateContext } from "../../lib/countryContext";
 import { AgentConfig, AgentResult, RequestStatus } from "../types/agent";
 import { generateResponse, extractJSON } from "../engine/ai";
 import { getDB } from "../engine/db";
@@ -44,7 +45,7 @@ function buildPrompt(config: AgentConfig, input: RunAgentInput): string {
     .replace("{country}", input.country)
     .replace("{language}", input.language)
     .replace("{context}", JSON.stringify(input.context ?? {})) +
-    `\n\nToday's date is ${new Date().toISOString().slice(0, 10)}. Only call a document date "in the future" if it is later than today's date.`;
+    "\n\n" + countryDateContext(input.country);
 }
 
 // ── تحديث حالة الطلب في قاعدة البيانات ──────────────────
