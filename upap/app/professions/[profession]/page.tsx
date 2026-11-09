@@ -1,6 +1,9 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { PROFESSIONS, getProfession } from '../../../data/catalog';
+import { dirOf, t } from '../../../lib/i18n';
+import { getLang } from '../../../lib/i18n/server';
+import { profName } from '../../../lib/i18n/names';
 import ProfessionHub from '../../../ui/components/ProfessionHub';
 
 export const dynamic = 'force-dynamic';
@@ -9,12 +12,13 @@ export function generateStaticParams() { return PROFESSIONS.map((p) => ({ profes
 export default function ProfessionPage({ params, searchParams }: { params: { profession: string }; searchParams: { agent?: string } }) {
   const p = getProfession(params.profession);
   if (!p) notFound();
+  const lang = getLang();
   return (
-    <main style={{ backgroundImage: `radial-gradient(900px 400px at 50% -100px, ${p.color}22, transparent)` }} className="min-h-screen bg-[#020617] text-[#f1f5f9]" dir="rtl">
+    <main style={{ backgroundImage: `radial-gradient(900px 400px at 50% -100px, ${p.color}22, transparent)` }} className="min-h-screen bg-[#020617] text-[#f1f5f9]" dir={dirOf(lang)}>
       <header className="border-b border-[rgba(255,255,255,0.1)]" style={{ background: `linear-gradient(135deg, #0f172a 0%, ${p.color}66 140%)` }}>
         <div className="mx-auto max-w-6xl px-5 py-8">
-          <Link href="/" className="text-sm text-[#cbd5e1] hover:underline">الرئيسية</Link>
-          <h1 className="mt-3 text-3xl font-bold" style={{ color: p.color }}>{p.icon} {p.name_ar}</h1>
+          <Link href="/" className="text-sm text-[#cbd5e1] hover:underline">{t(lang, 'common.home')}</Link>
+          <h1 className="mt-3 text-3xl font-bold" style={{ color: p.color }}>{p.icon} {profName(p, lang)}</h1>
           <p className="mt-2 text-[#cbd5e1]">{p.desc_ar}</p>
         </div>
       </header>
