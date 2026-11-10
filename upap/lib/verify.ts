@@ -1,23 +1,27 @@
 // التحقق من الأرقام والتواريخ بالكود لا بحساب النموذج (مفصول عن الواجهة ليسهل اختباره)
-export const toNum = (v: any): number | null => {
-  if (v === null || v === undefined || v === '') return null;
-  const n = typeof v === 'number' ? v : Number(String(v).replace(/[,\s]/g, ''));
-  return Number.isFinite(n) ? n : null;
-};
+import { parseNum, toNum, type Conv } from './numbers';
+export { toNum };
 
 export type CheckRow = { label: any; stated: number | null; sum: number | null; bad: boolean };
 export type DateRow = { label: any; quote: any; start: any; end: any; bad: boolean };
 
-// يقارن الرقم المعلن بمجموع الأجزاء؛ التسامح: 0.5% من المجموع أو 0.01 أيهما أكبر
+// يقارن الرقم المعلن بمجموع الأجزاء؛ التسامح: 0.5% من المجموع أو 0.01 أيهما أكبر.
+// إن كانت الأرقام ملتبسة (1,234 قد تكون ألفاً ومئتين أو واحداً فاصلة 234) نجرّب الاتفاقيتين، ولا نُعلن عدم تطابق إلا إذا فشلتا معاً.
+function checkOne(c: any, conv: Conv): CheckRow & { amb: boolean } { // eslint-disable-line @typescript-eslint/no-explicit-any
+  const st = parseNum(c?.stated, conv);
+  const ps = (Array.isArray(c?.parts) ? c.parts : []).map((p: any) => parseNum(p, conv)); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const parts: number[] = ps.map((p: { n: number | null }) => p.n).filter((n: number | null): n is number => n !== null);
+  const sum = parts.length ? Math.round(parts.reduce((a: number, b: number) => a + b, 0) * 100) / 100 : null;
+  const bad = st.n !== null && sum !== null && Math.abs(st.n - sum) > Math.max(0.01, Math.abs(sum) * 0.005);
+  return { label: c?.label, stated: st.n, sum, bad, amb: st.ambiguous || ps.some((p: { ambiguous: boolean }) => p.ambiguous) };
+}
 export function verifyChecks(raw: unknown): CheckRow[] {
-  return (Array.isArray(raw) ? raw : []).map((c: any) => {
-    const stated = toNum(c?.stated);
-    const parts: number[] = Array.isArray(c?.parts)
-      ? c.parts.map((p: any) => toNum(p)).filter((n: number | null): n is number => n !== null)
-      : [];
-    const sum = parts.length ? Math.round(parts.reduce((a: number, b: number) => a + b, 0) * 100) / 100 : null;
-    const bad = stated !== null && sum !== null && Math.abs(stated - sum) > Math.max(0.01, Math.abs(sum) * 0.005);
-    return { label: c?.label, stated, sum, bad };
+  return (Array.isArray(raw) ? raw : []).map((c: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const en = checkOne(c, 'en');
+    if (!en.bad || !en.amb) return { label: en.label, stated: en.stated, sum: en.sum, bad: en.bad };
+    const eu = checkOne(c, 'eu');
+    const pick = eu.bad ? en : eu;
+    return { label: pick.label, stated: pick.stated, sum: pick.sum, bad: pick.bad };
   });
 }
 
@@ -42,7 +46,8 @@ export type InvoiceIssue =
   | { code: 'due' };
 
 // بنود الفاتورة: الكمية × السعر = إجمالي البند، ومجموع البنود = المجموع الفرعي
-export function invoiceItemIssues(o: any): InvoiceIssue[] {
+export function invoiceItemIssues(o: any, conv: Conv = 'en', seen?: { amb: boolean }): InvoiceIssue[] {
+  const toNum = (v: unknown) => { const p = parseNum(v, conv); if (p.ambiguous && seen) seen.amb = true; return p.n; };
   const out: InvoiceIssue[] = [];
   const items = Array.isArray(o?.line_items) ? o.line_items : [];
   const tots: number[] = [];
@@ -58,11 +63,20 @@ export function invoiceItemIssues(o: any): InvoiceIssue[] {
 }
 
 // الإجمالي = المجموع الفرعي + الضريبة، وتاريخ الاستحقاق لا يسبق تاريخ الفاتورة
-export function verifyInvoice(o: any): InvoiceIssue[] {
-  const out = invoiceItemIssues(o);
+function invoiceIssuesWith(o: any, conv: Conv, seen: { amb: boolean }): InvoiceIssue[] {
+  const toNum = (v: unknown) => { const p = parseNum(v, conv); if (p.ambiguous) seen.amb = true; return p.n; };
+  const out = invoiceItemIssues(o, conv, seen);
   const sub = toNum(o?.subtotal), tax = toNum(o?.tax) ?? 0, tot = toNum(o?.total);
   if (sub && tot && !near(sub + tax, tot)) out.push({ code: 'total', sub, tax, calc: r2(sub + tax), stated: tot });
   const a = Date.parse(String(o?.invoice_date)), b = Date.parse(String(o?.due_date));
   if (Number.isFinite(a) && Number.isFinite(b) && b < a) out.push({ code: 'due' });
   return out;
+}
+
+export function verifyInvoice(o: any): InvoiceIssue[] {
+  const seen = { amb: false };
+  const en = invoiceIssuesWith(o, 'en', seen);
+  if (!en.length || !seen.amb) return en;
+  const eu = invoiceIssuesWith(o, 'eu', { amb: false });
+  return eu.length < en.length ? eu : en;
 }

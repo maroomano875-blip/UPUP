@@ -1,5 +1,6 @@
 import React from 'react';
 import { useI18n } from './I18nProvider';
+import { toNum } from '../../lib/numbers';
 
 type Props = { o: Record<string, any>; conf: number; warnings: string[]; color: string; review: boolean };
 
@@ -13,11 +14,6 @@ const ITEM_CLS: Record<string, string> = { ok: GREEN, mismatch: RED, duplicate: 
 const SEV_CLS: Record<string, string> = { high: RED, medium: AMBER, low: BLUE };
 const ATT_CLS: Record<string, string> = { urgent: RED, soon: AMBER, routine: GREEN };
 
-const toNum = (v: any): number | null => {
-  if (v === null || v === undefined || v === '') return null;
-  const n = typeof v === 'number' ? v : Number(String(v).replace(/[,\s]/g, ''));
-  return Number.isFinite(n) ? n : null;
-};
 const fmt = (n: number | null): string =>
   n === null ? '—' : n.toLocaleString('en-US', { maximumFractionDigits: 2 });
 
