@@ -6,6 +6,10 @@ import MedicalResult from './MedicalResult';
 import EngineeringResult from './EngineeringResult';
 import GenericResult from './GenericResult';
 import { verifyInvoice } from '../../lib/verify';
+import { useI18n } from './I18nProvider';
+import { agentName, agentDesc, plannedName, profName } from '../../lib/i18n/catalog';
+import { countryName } from '../../lib/i18n/names';
+import { staticText } from '../../lib/i18n/catalog';
 import { COUNTRIES, LANGUAGES, VOLATILE, complianceChecks, fmtMoney, getCountry } from '../../data/countries';
 
 /* ---------- أنواع ونصوص ---------- */
@@ -22,15 +26,12 @@ const sev = {
   warning: 'border-[rgba(245,158,11,0.4)] bg-[rgba(245,158,11,0.1)] text-[#fcd34d]',
   info: 'border-[rgba(14,165,233,0.3)] bg-[rgba(14,165,233,0.1)] text-[#7dd3fc]',
 } as const;
-const sevLabel = { blocker: 'مانع', warning: 'تنبيه', info: 'معلومة' } as const;
 const risk: Record<string, string> = {
   low: 'border-[rgba(16,185,129,0.4)] bg-[rgba(16,185,129,0.1)] text-[#6ee7b7]',
   medium: 'border-[rgba(245,158,11,0.4)] bg-[rgba(245,158,11,0.1)] text-[#fcd34d]',
   high: 'border-[rgba(239,68,68,0.4)] bg-[rgba(239,68,68,0.1)] text-[#fca5a5]',
   critical: 'border-[rgba(239,68,68,0.8)] bg-[rgba(239,68,68,0.3)] text-[#ffffff]',
 };
-const riskAr: Record<string, string> = { low: 'منخفض', medium: 'متوسط', high: 'مرتفع', critical: 'حرج' };
-const statusAr: Record<string, string> = { delivered: 'سُلّم', needs_human: 'يحتاج مراجعة', received: 'مستلم', parsing: 'قراءة', processing: 'تحليل', reviewing: 'مراجعة', failed: 'فشل' };
 
 const KEY_C = 'upap_clients_v1';
 const KEY_R = 'upap_runs_v1';
@@ -85,7 +86,7 @@ const card = 'rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42
 
 function Step({ n, title, color, children }: { n: number; title: string; color: string; children: React.ReactNode }) {
   return (
-    <section className={card} style={{ borderRight: `3px solid ${color}` }}>
+    <section className={card} style={{ borderInlineStart: `3px solid ${color}` }}>
       <h2 className="flex items-center gap-3 font-semibold">
         <span className="grid h-7 w-7 place-items-center rounded-full text-sm font-bold text-[#0f172a]" style={{ background: color }}>{n}</span>{title}
       </h2>
@@ -96,28 +97,29 @@ function Step({ n, title, color, children }: { n: number; title: string; color: 
 
 /* ---------- عرض النتيجة ---------- */
 function Result({ data, color }: { data: Out; color: string }) {
+  const { t } = useI18n();
   const o: Out = data.output ?? {};
   const conf = Math.round((data.confidence_score ?? 0) * 100);
   const warnings: string[] = data.warnings ?? [];
   const isContract = Array.isArray(o.clauses);
   if (isEmptyOut(o)) {
-    return <div className={`mt-5 rounded-lg border px-4 py-3 text-sm leading-7 ${sev.blocker}`}>لم يستطع الوكيل استخراج أي بيانات من هذا الملف، رغم أن النموذج أعطى نسبة ثقة. لا تعتمد هذه النتيجة. جرّب صورة أوضح وأقل ميلاناً، أو أعد المحاولة بعد قليل، ثم افتح تبويب «السجل والأنشطة» لمعرفة أي نموذج أجاب.</div>;
+    return <div className={`mt-5 rounded-lg border px-4 py-3 text-sm leading-7 ${sev.blocker}`}>{t('hub.empty')}</div>;
   }
   if (Array.isArray(o.sections)) return <GenericResult o={o} conf={conf} warnings={warnings} color={color} review={!!data.needs_human_review} />;
   if (Array.isArray(o.boq_items)) return <EngineeringResult o={o} conf={conf} warnings={warnings} color={color} review={!!data.needs_human_review} />;
   if (Array.isArray(o.tests)) return <MedicalResult o={o} conf={conf} warnings={warnings} color={color} review={!!data.needs_human_review} />;
   const rows: [string, string][] = isContract
-    ? [['القانون الحاكم', o.governing_law], ['الاختصاص', o.jurisdiction], ['النوع', o.contract_type]]
-    : [['المورد', o.vendor_name], ['رقم الفاتورة', o.invoice_number], ['التاريخ', o.invoice_date], ['الإجمالي', `${o.total ?? ''} ${o.currency ?? ''}`.trim()], ['التصنيف', o.category], ['القيد المقترح', o.suggested_journal_entry?.debit_account && `مدين: ${o.suggested_journal_entry.debit_account}`]]
+    ? [[t('hub.row.law'), o.governing_law], [t('hub.row.jur'), o.jurisdiction], [t('hub.row.type'), o.contract_type]]
+    : [[t('hub.row.vendor'), o.vendor_name], [t('hub.row.invNo'), o.invoice_number], [t('hub.row.date'), o.invoice_date], [t('hub.row.total'), `${o.total ?? ''} ${o.currency ?? ''}`.trim()], [t('hub.row.cat'), o.category], [t('hub.row.journal'), o.suggested_journal_entry?.debit_account && t('hub.row.debit', { v: o.suggested_journal_entry.debit_account })]]
       .map(([a, b]) => [a as string, b as string]);
   const codeIssues = isContract ? [] : verifyInvoice(o);
   return (
     <div className="mt-5 space-y-3">
-      {data.needs_human_review && <div className="rounded-lg border border-[rgba(245,158,11,0.4)] bg-[rgba(245,158,11,0.1)] px-4 py-3 text-sm text-[#fcd34d]">يحتاج هذا التحليل مراجعة مختص قبل أي قرار.</div>}
+      {data.needs_human_review && <div className="rounded-lg border border-[rgba(245,158,11,0.4)] bg-[rgba(245,158,11,0.1)] px-4 py-3 text-sm text-[#fcd34d]">{t('hub.needsReview')}</div>}
       <div className={card}>
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold">{isContract ? (o.contract_type || 'عقد') : `فاتورة ${o.vendor_name || ''}`}</h3>
-          <span className="rounded-full px-3 py-0.5 text-xs font-bold text-[#0f172a]" style={{ background: color }}>{conf}% ثقة</span>
+          <h3 className="font-semibold">{isContract ? (o.contract_type || t('hub.contract')) : t('hub.invoiceOf', { v: o.vendor_name || '' })}</h3>
+          <span className="rounded-full px-3 py-0.5 text-xs font-bold text-[#0f172a]" style={{ background: color }}>{t('hub.confidence', { n: conf })}</span>
         </div>
         <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
           {rows.map(([k, v]) => (<div key={k}><dt className="text-xs text-[#94a3b8]">{k}</dt><dd className="text-[#f1f5f9]" dir="auto">{v || '—'}</dd></div>))}
@@ -126,13 +128,13 @@ function Result({ data, color }: { data: Out; color: string }) {
       </div>
       {isContract && (o.clauses as Out[]).map((c, i) => (
         <div key={c.clause_id ?? i} className={`rounded-lg border px-4 py-3 ${risk[c.risk_level] ?? risk.medium}`}>
-          <div className="flex justify-between text-sm font-semibold"><span>{c.type}</span><span>{riskAr[c.risk_level] ?? c.risk_level}</span></div>
+          <div className="flex justify-between text-sm font-semibold"><span>{c.type}</span><span>{(['low', 'medium', 'high', 'critical'].includes(c.risk_level) ? t(`hub.risk.${c.risk_level}` as 'hub.risk.low') : c.risk_level)}</span></div>
           <p className="mt-1 text-xs leading-6">{c.risk_explanation}</p>
-          <p className="mt-1 text-xs leading-6 opacity-90">التوصية: {c.recommendation}</p>
+          <p className="mt-1 text-xs leading-6 opacity-90">{t('hub.recommend', { v: c.recommendation })}</p>
         </div>
       ))}
       {codeIssues.length > 0 && (
-        <ul className="space-y-1">{codeIssues.map((w, i) => <li key={i} className={`rounded-lg border px-3 py-2 text-sm ${sev.blocker}`}>فحص آلي بالكود: {w}</li>)}</ul>
+        <ul className="space-y-1">{codeIssues.map((w, i) => <li key={i} className={`rounded-lg border px-3 py-2 text-sm ${sev.blocker}`}>{t('hub.codeCheck', { v: w })}</li>)}</ul>
       )}
       {warnings.length > 0 && (
         <ul className="space-y-1">{warnings.map((w, i) => <li key={i} className={`rounded-lg border px-3 py-2 text-sm ${sev.warning}`}>{w}</li>)}</ul>
@@ -143,6 +145,7 @@ function Result({ data, color }: { data: Out; color: string }) {
 
 /* ---------- الصفحة الكاملة للمهنة ---------- */
 export default function ProfessionHub({ p, initialAgent }: { p: Profession; initialAgent?: string }) {
+  const { lang: ui, t } = useI18n();
   const [tab, setTab] = useState<Tab>('run');
   const [code, setCode] = useState('SY');
   const country = getCountry(code);
@@ -171,7 +174,7 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
   }, [tab, p.agents]);
 
   const langs = Array.from(new Set([...country.languages, 'ar', 'en-US']));
-  const checks = complianceChecks(country, p.slug);
+  const checks = complianceChecks(country, p.slug, ui);
   const cur = p.agents.find((a) => a.slug === agent);
   const myRuns = runs.filter((r) => p.agents.some((a) => a.slug === r.agent));
 
@@ -184,7 +187,7 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
   function runSample() {
     const sl = sampleLang(lang);
     const sm = SAMPLES[agent]?.[sl]; if (!sm) return;
-    setErr(''); setBadge(sl === 'ar' ? `نتيجة تجريبية محفوظة: ${sm.label}. لم يُستدعَ أي نموذج.` : `Saved demo result: ${sm.label}. No model was called.`); setRes(sm.data); setSt('done');
+    setErr(''); setBadge(t('hub.sample.badge', { label: sm.label })); setRes(sm.data); setSt('done');
   }
 
   async function run() {
@@ -194,26 +197,26 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
     const to = setTimeout(() => ctl.abort(), 85_000);
     try {
       const f = await shrink(file);
-      if (f.size > 4_300_000) throw new Error('الملف أكبر من 4.3MB. صوّره بدقة أقل أو قسّم الملف.');
+      if (f.size > 4_300_000) throw new Error(t('hub.err.big'));
       const ck = await fileKey(f, `${cur.slug}|${code}|${lang}|${notes}`);
       const hit = cacheGet(ck);
-      if (hit) { setBadge('نتيجة محفوظة لهذا الملف نفسه (لم يُستهلك أي طلب).'); setRes(hit); setSt('done'); return; }
+      if (hit) { setBadge(t('hub.cached')); setRes(hit); setSt('done'); return; }
       const fd = new FormData();
       fd.append('file', f); fd.append('country', code); fd.append('language', lang); fd.append('notes', notes);
       const r = await fetch(`/api/agents/${cur.slug}`, { method: 'POST', body: fd, signal: ctl.signal });
       const txt = await r.text();
-      let d: Out; try { d = JSON.parse(txt); } catch { throw new Error(r.status === 413 ? 'الملف كبير جداً.' : `ردّ غير متوقع من الخادم (${r.status}).`); }
-      if (!r.ok) throw new Error(d.error || 'فشلت المعالجة');
+      let d: Out; try { d = JSON.parse(txt); } catch { throw new Error(r.status === 413 ? t('hub.err.large') : t('hub.err.unexpected', { n: r.status })); }
+      if (!r.ok) throw new Error(d.error || t('hub.err.failed'));
       setRes(d); setSt('done');
       const o: Out = d.output ?? {};
       if (isEmptyOut(o)) return;
       cacheSet(ck, d);
       const run: Run = { id: String(Date.now()), clientId, agent: cur.slug, file: file.name, confidence: d.confidence_score ?? 0, at: new Date().toISOString(),
-        summary: Array.isArray(o.sections) ? `${o.sections.length} قسم · ${o.document_type ?? ''}` : Array.isArray(o.boq_items) ? `${o.boq_items.length} items` : Array.isArray(o.tests) ? `${o.tests.length} فحص · ${o.document_type ?? ''}` : Array.isArray(o.clauses) ? `${o.clauses.length} بند · ${o.contract_type ?? ''}` : `${o.vendor_name ?? ''} · ${o.total ?? ''} ${o.currency ?? ''}` };
+        summary: Array.isArray(o.sections) ? `${t('hub.sum.sections', { n: o.sections.length })} · ${o.document_type ?? ''}` : Array.isArray(o.boq_items) ? `${o.boq_items.length} items` : Array.isArray(o.tests) ? `${t('hub.sum.tests', { n: o.tests.length })} · ${o.document_type ?? ''}` : Array.isArray(o.clauses) ? `${t('hub.sum.clauses', { n: o.clauses.length })} · ${o.contract_type ?? ''}` : `${o.vendor_name ?? ''} · ${o.total ?? ''} ${o.currency ?? ''}` };
       const nr = [run, ...runs].slice(0, 200); setRuns(nr); save(KEY_R, nr);
     } catch (e) {
       const aborted = e instanceof Error && e.name === 'AbortError';
-      setErr(aborted ? 'استغرق التحليل وقتاً أطول من المعتاد لأن الخوادم المجانية مزدحمة الآن. أعد المحاولة بعد دقيقة، أو جرّب «المثال الجاهز» لرؤية شكل النتيجة فوراً.' : e instanceof Error ? e.message : 'خطأ غير متوقع');
+      setErr(aborted ? t('hub.err.timeout') : e instanceof Error ? e.message : t('hub.err.unknown'));
       setSt('error');
     } finally { clearTimeout(to); }
   }
@@ -226,7 +229,7 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
   }
   function delClient(id: string) { const n = clients.filter((c) => c.id !== id); setClients(n); save(KEY_C, n); if (clientId === id) setClientId(''); }
 
-  const tabs: [Tab, string][] = [['run', 'تشغيل الوكيل'], ['log', 'السجل والأنشطة'], ['clients', `العملاء (${clients.length})`], ['new', 'وكلاء جدد']];
+  const tabs: [Tab, string][] = [['run', t('hub.tab.run')], ['log', t('hub.tab.log')], ['clients', t('hub.tab.clients', { n: clients.length })], ['new', t('hub.tab.new')]];
 
   return (
     <div>
@@ -241,31 +244,31 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
       {tab === 'run' && (
         <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
           <div className="space-y-5">
-            <Step n={1} title="الدولة" color={p.color}>
+            <Step n={1} title={t('hub.step.country')} color={p.color}>
               <select className={fieldCls} value={code} onChange={(e) => { setCode(e.target.value); setLang(getCountry(e.target.value).languages[0]); }}>
-                {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.flag} {c.name_ar} — {c.currency}</option>)}
+                {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.flag} {countryName(c.code, ui, c.name_ar)} — {c.currency}</option>)}
               </select>
               <div className="mt-3 flex flex-wrap gap-1.5">
-                {country.regs.map((r) => <span key={r} className="rounded border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.05)] px-2 py-0.5 text-xs text-[#cbd5e1]">{r}</span>)}
-                {country.restricted && <span className="rounded border border-[rgba(245,158,11,0.4)] bg-[rgba(245,158,11,0.1)] px-2 py-0.5 text-xs text-[#fcd34d]">قيود دفع ← USDT</span>}
+                {country.regs.map((r) => <span key={r} className="rounded border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.05)] px-2 py-0.5 text-xs text-[#cbd5e1]">{staticText(r, ui)}</span>)}
+                {country.restricted && <span className="rounded border border-[rgba(245,158,11,0.4)] bg-[rgba(245,158,11,0.1)] px-2 py-0.5 text-xs text-[#fcd34d]">{t('hub.restricted')}</span>}
               </div>
-              <p className="mt-2 text-xs text-[#94a3b8]">{country.tax}</p>
+              <p className="mt-2 text-xs text-[#94a3b8]">{staticText(country.tax, ui)}</p>
             </Step>
-            <Step n={2} title="اللغة" color={p.color}>
+            <Step n={2} title={t('hub.step.lang')} color={p.color}>
               <select className={fieldCls} value={lang} onChange={(e) => setLang(e.target.value)}>
                 {langs.map((l) => <option key={l} value={l}>{LANGUAGES[l] ?? l}</option>)}
               </select>
             </Step>
-            <Step n={3} title="الوكيل" color={p.color}>
+            <Step n={3} title={t('hub.step.agent')} color={p.color}>
               {p.agents.length === 0 ? (
-                <p className="text-sm leading-7 text-[#cbd5e1]">لا يوجد وكيل جاهز لهذه المهنة بعد. شاهد تبويب «وكلاء جدد».</p>
+                <p className="text-sm leading-7 text-[#cbd5e1]">{t('hub.noAgent')}</p>
               ) : (
                 <div className="space-y-2">
                   {p.agents.map((a) => (
                     <label key={a.slug} className="flex cursor-pointer items-start gap-3 rounded-lg border p-3"
                       style={{ borderColor: agent === a.slug ? p.color : 'rgba(255,255,255,0.1)', background: agent === a.slug ? `${p.color}1a` : 'transparent' }}>
                       <input type="radio" name="agent" checked={agent === a.slug} onChange={() => setAgent(a.slug)} className="mt-1" />
-                      <span><span className="block font-semibold">{a.name_ar}</span><span className="block text-sm leading-6 text-[#94a3b8]">{a.desc_ar}</span></span>
+                      <span><span className="block font-semibold">{agentName(a, ui)}</span><span className="block text-sm leading-6 text-[#94a3b8]">{agentDesc(a, ui)}</span></span>
                     </label>
                   ))}
                 </div>
@@ -273,24 +276,24 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
             </Step>
             {cur && (
               <>
-                <Step n={4} title="الملف والملاحظات" color={p.color}>
+                <Step n={4} title={t('hub.step.file')} color={p.color}>
                   <input ref={inp} type="file" className="hidden" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.heic,.heif" onChange={(e) => { setFile(e.target.files?.[0] ?? null); setSt('idle'); }} />
                   <button type="button" onClick={() => inp.current?.click()}
                     className="w-full rounded-lg border-2 border-dashed border-[rgba(255,255,255,0.25)] px-4 py-7 text-center text-[#cbd5e1] hover:border-[rgba(255,255,255,0.5)]">
-                    {file ? <b className="text-[#f1f5f9]" dir="auto">{file.name}</b> : 'اضغط لاختيار ملف (PDF، صورة، Word، Excel…)'}
+                    {file ? <b className="text-[#f1f5f9]" dir="auto">{file.name}</b> : t('hub.pickFile')}
                   </button>
-                  <textarea className={`${fieldCls} mt-3`} rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="ملاحظة اختيارية: ركّز على الضريبة، أو على بند الفسخ…" />
-                  <select className={`${fieldCls} mt-3`} value={clientId} onChange={(e) => setClientId(e.target.value)} aria-label="العميل">
-                    <option value="">بدون ربط بعميل</option>
+                  <textarea className={`${fieldCls} mt-3`} rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t('hub.notes.ph')} />
+                  <select className={`${fieldCls} mt-3`} value={clientId} onChange={(e) => setClientId(e.target.value)} aria-label={t('hub.client.label')}>
+                    <option value="">{t('hub.client.none')}</option>
                     {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                   <button onClick={run} disabled={!file || st === 'loading'}
                     className="mt-4 w-full rounded-lg py-3 font-bold text-[#020617] disabled:opacity-40" style={{ background: p.color }}>
-                    {st === 'loading' ? `جارِ التحليل… ${sec} ث (الملفات الممسوحة قد تستغرق حتى دقيقة)` : 'ابدأ التحليل ←'}
+                    {st === 'loading' ? t('hub.analyzing', { n: sec }) : t('hub.start')}
                   </button>
                   {SAMPLES[agent] && (
                     <button type="button" onClick={runSample} className="mt-3 w-full rounded-lg border px-4 py-2.5 text-sm font-semibold"
-                      style={{ borderColor: p.color, color: p.color }}>⚡ {sampleLang(lang) === 'ar' ? 'جرّب مثالاً جاهزاً (فوري)' : 'Try a ready example (instant)'}: {SAMPLES[agent][sampleLang(lang)].label}</button>
+                      style={{ borderColor: p.color, color: p.color }}>⚡ {t('hub.sample.btn')}: {SAMPLES[agent][sampleLang(lang)].label}</button>
                   )}
                   {st === 'done' && badge && <div className={`mt-4 rounded-lg border px-4 py-2 text-xs ${sev.info}`}>{badge}</div>}
                   {st === 'error' && <div className={`mt-4 rounded-lg border px-4 py-3 text-sm leading-7 ${sev.blocker}`} dir="auto">⚠ {err}</div>}
@@ -300,23 +303,23 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
             )}
             {checks.length > 0 && (
               <section className={card}>
-                <h2 className="font-semibold">فحوصات الامتثال: {country.name_ar} × {p.name_ar}</h2>
+                <h2 className="font-semibold">{t('hub.checks.title', { c: countryName(country.code, ui, country.name_ar), p: profName(p, ui) })}</h2>
                 <ul className="mt-3 space-y-2">
-                  {checks.map((c, i) => <li key={i} className={`rounded-lg border px-3 py-2 text-sm ${sev[c.severity]}`}><b className="ml-2">{sevLabel[c.severity]}</b>{c.text}</li>)}
+                  {checks.map((c, i) => <li key={i} className={`rounded-lg border px-3 py-2 text-sm ${sev[c.severity]}`}><b className="me-2">{t(`hub.sev.${c.severity}` as 'hub.sev.info')}</b>{c.text}</li>)}
                 </ul>
               </section>
             )}
           </div>
           <aside className="space-y-5">
             <section className={card}>
-              <h3 className="font-semibold">تنسيق العملة</h3>
+              <h3 className="font-semibold">{t('hub.money.title')}</h3>
               <div className="mt-3 text-2xl font-bold" dir="ltr">{fmtMoney(1234567.89, country)}</div>
               <div className="mt-1 text-xs text-[#94a3b8]">{country.currency} · {country.locale} · {country.tz}</div>
-              {VOLATILE.includes(country.currency) && <p className="mt-3 rounded border border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.1)] p-2 text-xs text-[#fcd34d]">عملة متقلبة: تُعرض المبالغ كما وردت دون تحويل.</p>}
+              {VOLATILE.includes(country.currency) && <p className="mt-3 rounded border border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.1)] p-2 text-xs text-[#fcd34d]">{t('hub.money.volatile')}</p>}
             </section>
             <section className={`${card} text-sm leading-7`}>
-              <h3 className="mb-2 font-semibold">ضمانات كل طلب</h3>
-              <ul className="list-disc space-y-1 pr-5 text-[#94a3b8]"><li>مراجعة بوكيل ثانٍ</li><li>تسجيل في سجل التدقيق</li><li>عزل بيانات عميلك</li><li>تصحيحاتك تحسّن النتائج لاحقاً</li></ul>
+              <h3 className="mb-2 font-semibold">{t('hub.guar.title')}</h3>
+              <ul className="list-disc space-y-1 ps-5 text-[#94a3b8]">{(['1', '2', '3', '4'] as const).map((n) => <li key={n}>{t(`hub.guar.${n}` as 'hub.guar.1')}</li>)}</ul>
             </section>
           </aside>
         </div>
@@ -325,37 +328,37 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
       {tab === 'log' && (
         <div className="space-y-5">
           <section className={card}>
-            <h2 className="font-semibold">آخر تحليلاتك على هذا الجهاز</h2>
-            {myRuns.length === 0 && <p className="mt-3 text-sm text-[#94a3b8]">لا تحليلات بعد. شغّل وكيلاً وسيظهر هنا.</p>}
+            <h2 className="font-semibold">{t('hub.log.mine')}</h2>
+            {myRuns.length === 0 && <p className="mt-3 text-sm text-[#94a3b8]">{t('hub.log.none')}</p>}
             <ul className="mt-3 divide-y divide-[rgba(255,255,255,0.1)]">
               {myRuns.slice(0, 30).map((r) => (
                 <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
-                  <span><b dir="auto">{r.file}</b> <span className="text-[#94a3b8]">· {p.agents.find((a) => a.slug === r.agent)?.name_ar}</span>
-                    {r.clientId && <span className="mr-2 rounded bg-[rgba(255,255,255,0.08)] px-2 py-0.5 text-xs">{clients.find((c) => c.id === r.clientId)?.name ?? 'عميل محذوف'}</span>}
+                  <span><b dir="auto">{r.file}</b> <span className="text-[#94a3b8]">· {(() => { const ag = p.agents.find((a) => a.slug === r.agent); return ag ? agentName(ag, ui) : ''; })()}</span>
+                    {r.clientId && <span className="ms-2 rounded bg-[rgba(255,255,255,0.08)] px-2 py-0.5 text-xs">{clients.find((c) => c.id === r.clientId)?.name ?? t('hub.log.deletedClient')}</span>}
                     <span className="block text-xs text-[#94a3b8]" dir="auto">{r.summary}</span></span>
-                  <span className="text-xs text-[#94a3b8]" dir="ltr">{Math.round(r.confidence * 100)}% · {new Date(r.at).toLocaleString('ar')}</span>
+                  <span className="text-xs text-[#94a3b8]" dir="ltr">{Math.round(r.confidence * 100)}% · {new Date(r.at).toLocaleString(ui)}</span>
                 </li>
               ))}
             </ul>
           </section>
           <section className={card}>
-            <h2 className="font-semibold">أحداث التدقيق (أي نموذج أجاب)</h2>
+            <h2 className="font-semibold">{t('hub.log.audit')}</h2>
             <ul className="mt-3 divide-y divide-[rgba(255,255,255,0.1)]">
-              {audit.length === 0 && <li className="py-2 text-sm text-[#94a3b8]">لا أحداث.</li>}
+              {audit.length === 0 && <li className="py-2 text-sm text-[#94a3b8]">{t('hub.log.noEvents')}</li>}
               {audit.map((a, i) => (
                 <li key={i} className="py-2 text-xs" dir="ltr"><b className="text-[#a5b4fc]">{a.event}</b> <span className="text-[#94a3b8]">{a.at.slice(5, 16).replace('T', ' ')}</span><div className="mt-0.5 break-all text-[#cbd5e1]">{a.detail}</div></li>
               ))}
             </ul>
           </section>
           <section className={card}>
-            <h2 className="font-semibold">سجل الخادم (قاعدة البيانات)</h2>
-            {rows === null && <p className="mt-3 text-sm text-[#94a3b8]">جارِ التحميل…</p>}
-            {rows && !connected && <p className="mt-3 text-sm text-[#fcd34d]">قاعدة البيانات غير متصلة.</p>}
-            {rows && connected && rows.length === 0 && <p className="mt-3 text-sm text-[#94a3b8]">لا طلبات مسجلة.</p>}
+            <h2 className="font-semibold">{t('hub.log.server')}</h2>
+            {rows === null && <p className="mt-3 text-sm text-[#94a3b8]">{t('hub.log.loading')}</p>}
+            {rows && !connected && <p className="mt-3 text-sm text-[#fcd34d]">{t('hub.log.dbOff')}</p>}
+            {rows && connected && rows.length === 0 && <p className="mt-3 text-sm text-[#94a3b8]">{t('hub.log.noReq')}</p>}
             <ul className="mt-3 divide-y divide-[rgba(255,255,255,0.1)]">
               {(rows ?? []).map((r) => (
                 <li key={r.id} className="flex flex-wrap justify-between gap-2 py-2 text-sm">
-                  <span>{statusAr[r.status] ?? r.status} <span className="text-[#94a3b8]">{r.agent}</span></span>
+                  <span>{['delivered', 'needs_human', 'received', 'parsing', 'processing', 'reviewing', 'failed'].includes(r.status) ? t(`hub.status.${r.status}` as 'hub.status.failed') : r.status} <span className="text-[#94a3b8]">{r.agent}</span></span>
                   <span className="text-xs text-[#94a3b8]" dir="ltr">{r.confidence != null ? `${Math.round(r.confidence * 100)}% · ` : ''}{r.created_at.slice(0, 16).replace('T', ' ')}</span>
                 </li>
               ))}
@@ -367,19 +370,19 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
       {tab === 'clients' && (
         <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
           <section className={card}>
-            <h2 className="font-semibold">عملاؤك</h2>
-            {clients.length === 0 && <p className="mt-3 text-sm text-[#94a3b8]">أضف أول عميل من النموذج المجاور، ثم اربط تحليلاتك به.</p>}
+            <h2 className="font-semibold">{t('hub.cl.title')}</h2>
+            {clients.length === 0 && <p className="mt-3 text-sm text-[#94a3b8]">{t('hub.cl.empty')}</p>}
             <ul className="mt-3 space-y-3">
               {clients.map((c) => {
                 const n = runs.filter((r) => r.clientId === c.id).length;
                 return (
                   <li key={c.id} className="rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(2,6,23,0.6)] p-4">
-                    <div className="flex items-center justify-between gap-2"><b>{c.name}</b><span className="text-xs text-[#94a3b8]">{n} تحليل</span></div>
+                    <div className="flex items-center justify-between gap-2"><b>{c.name}</b><span className="text-xs text-[#94a3b8]">{t('hub.cl.count', { n })}</span></div>
                     {c.note && <p className="mt-1 text-sm text-[#94a3b8]">{c.note}</p>}
                     <div className="mt-3 flex gap-2 text-xs">
-                      <button className="rounded border border-[rgba(255,255,255,0.2)] px-3 py-1" onClick={() => { setEditing(c.id); setCName(c.name); setCNote(c.note); }}>تعديل</button>
-                      <button className="rounded border border-[rgba(255,255,255,0.2)] px-3 py-1" onClick={() => { setClientId(c.id); setTab('run'); }}>تحليل جديد له</button>
-                      <button className="rounded border border-[rgba(239,68,68,0.4)] px-3 py-1 text-[#fca5a5]" onClick={() => delClient(c.id)}>حذف</button>
+                      <button className="rounded border border-[rgba(255,255,255,0.2)] px-3 py-1" onClick={() => { setEditing(c.id); setCName(c.name); setCNote(c.note); }}>{t('hub.cl.edit')}</button>
+                      <button className="rounded border border-[rgba(255,255,255,0.2)] px-3 py-1" onClick={() => { setClientId(c.id); setTab('run'); }}>{t('hub.cl.newRun')}</button>
+                      <button className="rounded border border-[rgba(239,68,68,0.4)] px-3 py-1 text-[#fca5a5]" onClick={() => delClient(c.id)}>{t('hub.cl.del')}</button>
                     </div>
                   </li>
                 );
@@ -387,23 +390,23 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
             </ul>
           </section>
           <section className={card}>
-            <h2 className="font-semibold">{editing ? 'تعديل عميل' : 'عميل جديد'}</h2>
-            <input className={`${fieldCls} mt-3`} value={cName} onChange={(e) => setCName(e.target.value)} placeholder="اسم العميل" />
-            <textarea className={`${fieldCls} mt-3`} rows={3} value={cNote} onChange={(e) => setCNote(e.target.value)} placeholder="ملاحظات (اختياري)" />
-            <button onClick={saveClient} disabled={!cName.trim()} className="mt-3 w-full rounded-lg py-2.5 font-bold text-[#020617] disabled:opacity-40" style={{ background: p.color }}>{editing ? 'حفظ التعديل' : 'إضافة العميل'}</button>
-            {editing && <button onClick={() => { setEditing(''); setCName(''); setCNote(''); }} className="mt-2 w-full text-sm text-[#94a3b8]">إلغاء</button>}
-            <p className="mt-3 text-xs leading-6 text-[#94a3b8]">العملاء محفوظون على هذا الجهاز فقط حالياً.</p>
+            <h2 className="font-semibold">{editing ? t('hub.cl.formEdit') : t('hub.cl.formNew')}</h2>
+            <input className={`${fieldCls} mt-3`} value={cName} onChange={(e) => setCName(e.target.value)} placeholder={t('hub.cl.name')} />
+            <textarea className={`${fieldCls} mt-3`} rows={3} value={cNote} onChange={(e) => setCNote(e.target.value)} placeholder={t('hub.cl.note')} />
+            <button onClick={saveClient} disabled={!cName.trim()} className="mt-3 w-full rounded-lg py-2.5 font-bold text-[#020617] disabled:opacity-40" style={{ background: p.color }}>{editing ? t('hub.cl.saveEdit') : t('hub.cl.add')}</button>
+            {editing && <button onClick={() => { setEditing(''); setCName(''); setCNote(''); }} className="mt-2 w-full text-sm text-[#94a3b8]">{t('hub.cl.cancel')}</button>}
+            <p className="mt-3 text-xs leading-6 text-[#94a3b8]">{t('hub.cl.local')}</p>
           </section>
         </div>
       )}
 
       {tab === 'new' && (
         <section className={card}>
-          <h2 className="font-semibold">وكلاء قيد البناء لمهنة {p.name_ar}</h2>
+          <h2 className="font-semibold">{t('hub.new.title', { p: profName(p, ui) })}</h2>
           <ul className="mt-4 grid gap-3 sm:grid-cols-2">
             {p.planned_agents.map((x) => (
               <li key={x} className="rounded-lg border border-dashed border-[rgba(255,255,255,0.25)] p-4">
-                <b>{x}</b><span className="mt-2 block text-xs text-[#94a3b8]">قريباً · سيُضاف هنا بنفس خطوات التشغيل</span>
+                <b>{plannedName(x, ui)}</b><span className="mt-2 block text-xs text-[#94a3b8]">{t('hub.new.soon')}</span>
               </li>
             ))}
           </ul>

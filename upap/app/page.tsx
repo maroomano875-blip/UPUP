@@ -7,6 +7,7 @@ import AgentConsole from '../ui/components/AgentConsole';
 import { t, dirOf } from '../lib/i18n';
 import { getLang } from '../lib/i18n/server';
 import { countryName, profName } from '../lib/i18n/names';
+import { agentName, plannedName, profDesc, staticText } from '../lib/i18n/catalog';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,7 +79,7 @@ export default async function Home() {
                 style={{ borderTop: `3px solid ${p.color}`, background: `linear-gradient(160deg, ${p.color}26 0%, #0f172acc 70%)` }}>
                 <div className="grid h-11 w-11 place-items-center rounded-xl text-2xl" style={{ background: `${p.color}33`, boxShadow: `inset 0 0 0 1px ${p.color}66` }}>{p.icon}</div>
                 <div className="mt-3 font-semibold" style={{ color: p.color }}>{profName(p, lang)}</div>
-                <div className="text-xs text-[#94a3b8] mt-1 line-clamp-2">{p.desc_ar}</div>
+                <div className="text-xs text-[#94a3b8] mt-1 line-clamp-2">{profDesc(p, lang)}</div>
                 <span className="mt-3 inline-block rounded-full border px-2 py-0.5 text-[11px]" style={p.status === 'live' ? { borderColor: `${p.color}80`, background: `${p.color}26`, color: p.color } : { borderColor: 'rgba(148,163,184,0.3)', color: '#94a3b8' }}>
                   {p.status === 'live' ? T('home.pick.live', { n: p.agents.length }) : T('common.soon')}
                 </span>
@@ -97,7 +98,7 @@ export default async function Home() {
               <tbody>
                 {agents.map((a) => (
                   <tr key={a.slug} className="border-t border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.5)]">
-                    <td className="p-3"><Link href={a.href} className="font-medium text-[#a5b4fc] hover:underline">{a.name_ar}</Link></td>
+                    <td className="p-3"><Link href={a.href} className="font-medium text-[#a5b4fc] hover:underline">{agentName(a, lang)}</Link></td>
                     <td className="p-3">{a.profession.icon} {profName(a.profession, lang)}</td>
                     <td className="p-3 text-[#cbd5e1]">{a.needsApproval ? T('home.reg.review2h') : T('home.reg.review2')}</td>
                     <td className="p-3"><span className={`rounded-full border px-2 py-0.5 text-xs ${stateStyle.built}`}>{T('common.running')}</span></td>
@@ -105,7 +106,7 @@ export default async function Home() {
                 ))}
                 {PROFESSIONS.filter((p) => p.status === 'planned').slice(0, 4).map((p) => (
                   <tr key={p.slug} className="border-t border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.3)] text-[#94a3b8]">
-                    <td className="p-3">{p.planned_agents[0]}</td><td className="p-3">{p.icon} {profName(p, lang)}</td><td className="p-3">—</td>
+                    <td className="p-3">{plannedName(p.planned_agents[0], lang)}</td><td className="p-3">{p.icon} {profName(p, lang)}</td><td className="p-3">—</td>
                     <td className="p-3"><span className={`rounded-full border px-2 py-0.5 text-xs ${stateStyle.planned}`}>{T('common.planned')}</span></td>
                   </tr>
                 ))}
@@ -140,9 +141,9 @@ export default async function Home() {
                   <span className="font-semibold">{c.flag} {countryName(c.code, lang, c.name_ar)}</span>
                   <span className="rounded-md bg-[rgba(99,102,241,0.2)] px-2 py-0.5 text-xs text-[#c7d2fe]">{c.currency}</span>
                 </div>
-                <div className="mt-2 text-xs text-[#94a3b8]">{c.tax} · {c.dir.toUpperCase()} · {c.tz}</div>
+                <div className="mt-2 text-xs text-[#94a3b8]">{staticText(c.tax, lang)} · {c.dir.toUpperCase()} · {c.tz}</div>
                 <div className="mt-2 flex flex-wrap gap-1">
-                  {c.regs.map((r) => <span key={r} className="rounded bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] px-1.5 py-0.5 text-[11px] text-[#cbd5e1]">{r}</span>)}
+                  {c.regs.map((r) => <span key={r} className="rounded bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] px-1.5 py-0.5 text-[11px] text-[#cbd5e1]">{staticText(r, lang)}</span>)}
                 </div>
                 {c.restricted && <div className="mt-2 rounded bg-[rgba(245,158,11,0.1)] border border-[rgba(245,158,11,0.3)] px-2 py-1 text-xs text-[#fcd34d]">{T('home.comp.restricted')}</div>}
                 {VOLATILE.includes(c.currency) && <div className="mt-1 text-[11px] text-[#64748b]">{T('home.comp.volatile')}</div>}

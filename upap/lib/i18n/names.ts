@@ -5,6 +5,4 @@ export function countryName(code: string, lang: Lang, fallbackAr: string): strin
   if (lang === 'ar') return fallbackAr;
   try { return new Intl.DisplayNames([lang], { type: 'region' }).of(code) ?? fallbackAr; } catch { return fallbackAr; }
 }
-export function profName(p: { name_ar: string; name_en: string }, lang: Lang): string {
-  return lang === 'ar' ? p.name_ar : p.name_en;
-}
+export { profName } from './catalog';

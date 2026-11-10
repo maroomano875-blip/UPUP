@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { PROFESSIONS, getProfession } from '../../../data/catalog';
 import { dirOf, t } from '../../../lib/i18n';
 import { getLang } from '../../../lib/i18n/server';
-import { profName } from '../../../lib/i18n/names';
+import { profName, profDesc } from '../../../lib/i18n/catalog';
 import ProfessionHub from '../../../ui/components/ProfessionHub';
 
 export const dynamic = 'force-dynamic';
@@ -19,7 +19,7 @@ export default function ProfessionPage({ params, searchParams }: { params: { pro
         <div className="mx-auto max-w-6xl px-5 py-8">
           <Link href="/" className="text-sm text-[#cbd5e1] hover:underline">{t(lang, 'common.home')}</Link>
           <h1 className="mt-3 text-3xl font-bold" style={{ color: p.color }}>{p.icon} {profName(p, lang)}</h1>
-          <p className="mt-2 text-[#cbd5e1]">{p.desc_ar}</p>
+          <p className="mt-2 text-[#cbd5e1]">{profDesc(p, lang)}</p>
         </div>
       </header>
       <div className="mx-auto max-w-6xl px-5 py-8"><ProfessionHub p={p} initialAgent={searchParams.agent} /></div>

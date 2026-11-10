@@ -54,14 +54,16 @@ export function fmtMoney(amount: number, c: Country) {
 
 // فحوصات امتثال خفيفة تُعرض في الواجهة (القواعد الكاملة تُنفَّذ داخل الوكلاء).
 export interface Check { severity: 'blocker' | 'warning' | 'info'; text: string }
-export function complianceChecks(c: Country, professionSlug: string): Check[] {
+type L3 = 'ar' | 'en' | 'fr';
+const L = (lang: L3, ar: string, en: string, fr: string) => (lang === 'ar' ? ar : lang === 'fr' ? fr : en);
+export function complianceChecks(c: Country, professionSlug: string, lang: L3 = 'ar'): Check[] {
   const out: Check[] = [];
-  out.push({ severity: 'info', text: 'نسب الضرائب والأنظمة المعروضة إرشادية، وتُراجع مع جهة مختصة قبل الاعتماد.' });
-  if (c.restricted) out.push({ severity: 'warning', text: 'قيود على الدفع الدولي في هذا البلد — الاشتراك يتم بعملة USDT/TRC20.' });
-  if (VOLATILE.includes(c.currency)) out.push({ severity: 'info', text: `عملة ${c.currency} متقلبة؛ تُعرض المبالغ كما وردت دون تحويل تلقائي.` });
-  if (c.regs.some((r) => /GDPR|AI Act/.test(r))) out.push({ severity: 'info', text: 'لا تُرفع بيانات شخصية دون أساس قانوني؛ سجل التدقيق مفعّل لكل طلب.' });
-  if (professionSlug === 'medicine' && c.regs.includes('HIPAA')) out.push({ severity: 'blocker', text: 'البيانات الصحية المحمية (PHI) تتطلب اتفاقية BAA — الوكيل غير متاح بعد.' });
-  if (['law', 'medicine', 'insurance'].includes(professionSlug)) out.push({ severity: 'warning', text: 'المخرجات مساعدة مهنية وليست رأياً نهائياً؛ المراجعة البشرية مطلوبة قبل الاعتماد.' });
-  if (professionSlug === 'accounting' && c.code === 'SA') out.push({ severity: 'info', text: 'تحقق من متطلبات الفوترة الإلكترونية (ZATCA) عند الإصدار.' });
+  out.push({ severity: 'info', text: L(lang, 'نسب الضرائب والأنظمة المعروضة إرشادية، وتُراجع مع جهة مختصة قبل الاعتماد.', 'Tax rates and regulations shown are indicative and should be checked with a specialist before relying on them.', 'Les taux d’imposition et réglementations affichés sont indicatifs et doivent être vérifiés auprès d’un spécialiste.') });
+  if (c.restricted) out.push({ severity: 'warning', text: L(lang, 'قيود على الدفع الدولي في هذا البلد — الاشتراك يتم بعملة USDT/TRC20.', 'International payments are restricted in this country — subscription is paid in USDT/TRC20.', 'Les paiements internationaux sont restreints dans ce pays — l’abonnement se règle en USDT/TRC20.') });
+  if (VOLATILE.includes(c.currency)) out.push({ severity: 'info', text: L(lang, `عملة ${c.currency} متقلبة؛ تُعرض المبالغ كما وردت دون تحويل تلقائي.`, `The ${c.currency} currency is volatile; amounts are shown as received, without automatic conversion.`, `La devise ${c.currency} est volatile ; les montants sont affichés tels quels, sans conversion automatique.`) });
+  if (c.regs.some((r) => /GDPR|AI Act/.test(r))) out.push({ severity: 'info', text: L(lang, 'لا تُرفع بيانات شخصية دون أساس قانوني؛ سجل التدقيق مفعّل لكل طلب.', 'Do not upload personal data without a legal basis; the audit log is on for every request.', 'Ne téléversez pas de données personnelles sans base légale ; le journal d’audit est actif pour chaque demande.') });
+  if (professionSlug === 'medicine' && c.regs.includes('HIPAA')) out.push({ severity: 'blocker', text: L(lang, 'البيانات الصحية المحمية (PHI) تتطلب اتفاقية BAA — الوكيل غير متاح بعد.', 'Protected health information (PHI) requires a BAA — the agent is not available yet.', 'Les données de santé protégées (PHI) exigent un accord BAA — l’agent n’est pas encore disponible.') });
+  if (['law', 'medicine', 'insurance'].includes(professionSlug)) out.push({ severity: 'warning', text: L(lang, 'المخرجات مساعدة مهنية وليست رأياً نهائياً؛ المراجعة البشرية مطلوبة قبل الاعتماد.', 'Outputs are professional aid, not a final opinion; human review is required before relying on them.', 'Les résultats sont une aide professionnelle et non un avis définitif ; une relecture humaine est requise avant toute décision.') });
+  if (professionSlug === 'accounting' && c.code === 'SA') out.push({ severity: 'info', text: L(lang, 'تحقق من متطلبات الفوترة الإلكترونية (ZATCA) عند الإصدار.', 'Check the e-invoicing (ZATCA) requirements when issuing.', 'Vérifiez les exigences de facturation électronique (ZATCA) lors de l’émission.') });
   return out;
 }
