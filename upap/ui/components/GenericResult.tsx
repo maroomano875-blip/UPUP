@@ -79,6 +79,10 @@ export default function GenericResult({ o, conf, warnings, color, review }: Prop
                   <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs ${d.bad ? RED : GREEN}`}>{d.bad ? t('res.endBeforeStart') : t('res.ordered')}</span>
                 </div>
                 <div className="mt-1 text-xs text-[#94a3b8]">{t('res.fromTo', { a: `\u2066${String(d.start ?? '—')}\u2069`, b: `\u2066${String(d.end ?? '—')}\u2069` })}</div>
+                {d.cal !== 'unknown' && <div className="mt-1 text-xs text-[#94a3b8]">{t(`res.cal.${d.cal}` as 'res.cal.hijri')}</div>}
+                {(d.issues ?? []).map((k: string) => (
+                  <div key={k} className="mt-1 text-xs leading-6 text-[#fbbf24]">{t(`res.dateIssue.${k}` as 'res.dateIssue.invalid', { a: `\u2066${d.gStart ?? ''}\u2069`, b: `\u2066${d.gEnd ?? ''}\u2069` })}</div>
+                ))}
                 {d.quote ? <div className="mt-1 text-xs leading-6 text-[#cbd5e1]">{t('res.modelRead', { q: String(d.quote) })}</div> : null}
               </div>
             ))}

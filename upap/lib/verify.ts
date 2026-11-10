@@ -1,9 +1,10 @@
+import { judgeDates, type DateVerdict } from './dates';
 // التحقق من الأرقام والتواريخ بالكود لا بحساب النموذج (مفصول عن الواجهة ليسهل اختباره)
 import { parseNum, toNum, type Conv } from './numbers';
 export { toNum };
 
 export type CheckRow = { label: any; stated: number | null; sum: number | null; bad: boolean };
-export type DateRow = { label: any; quote: any; start: any; end: any; bad: boolean };
+export type DateRow = { label: any; quote: any; start: any; end: any; bad: boolean } & Omit<DateVerdict, 'bad'>;
 
 // يقارن الرقم المعلن بمجموع الأجزاء؛ التسامح: 0.5% من المجموع أو 0.01 أيهما أكبر.
 // إن كانت الأرقام ملتبسة (1,234 قد تكون ألفاً ومئتين أو واحداً فاصلة 234) نجرّب الاتفاقيتين، ولا نُعلن عدم تطابق إلا إذا فشلتا معاً.
@@ -25,13 +26,16 @@ export function verifyChecks(raw: unknown): CheckRow[] {
   });
 }
 
-// تاريخ النهاية قبل البداية = مشكلة؛ أي قيمة غير مفهومة لا تُعدّ خطأ
+// تاريخ النهاية قبل البداية = مشكلة، بحسب تقويم الملف نفسه (lib/dates.ts)؛ أي قيمة غير مفهومة لا تُعدّ خطأ
 export function verifyDates(raw: unknown): DateRow[] {
   return (Array.isArray(raw) ? raw : []).map((d: any) => {
-    const a = Date.parse(String(d?.start));
-    const b = Date.parse(String(d?.end));
-    const bad = Number.isFinite(a) && Number.isFinite(b) && a > b;
-    return { label: d?.label, quote: d?.quote, start: d?.start, end: d?.end, bad };
+    let v = judgeDates(d?.start, d?.end, d?.quote);
+    if (v.cal === 'unknown' && !v.issues.includes('invalid')) {
+      // نصٌّ غير ISO: نحتفظ بالسلوك القديم المتساهل (ترتيب فقط إن فُهم التاريخان)
+      const a = Date.parse(String(d?.start)), b = Date.parse(String(d?.end));
+      v = { ...v, bad: Number.isFinite(a) && Number.isFinite(b) && a > b };
+    }
+    return { label: d?.label, quote: d?.quote, start: d?.start, end: d?.end, ...v };
   });
 }
 
