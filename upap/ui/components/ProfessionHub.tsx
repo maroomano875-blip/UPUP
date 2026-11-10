@@ -6,6 +6,7 @@ import MedicalResult from './MedicalResult';
 import EngineeringResult from './EngineeringResult';
 import GenericResult from './GenericResult';
 import { verifyInvoice } from '../../lib/verify';
+import { invoiceIssueText } from '../../lib/i18n/format';
 import { useI18n } from './I18nProvider';
 import { agentName, agentDesc, plannedName, profName } from '../../lib/i18n/catalog';
 import { countryName } from '../../lib/i18n/names';
@@ -97,7 +98,7 @@ function Step({ n, title, color, children }: { n: number; title: string; color: 
 
 /* ---------- عرض النتيجة ---------- */
 function Result({ data, color }: { data: Out; color: string }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const o: Out = data.output ?? {};
   const conf = Math.round((data.confidence_score ?? 0) * 100);
   const warnings: string[] = data.warnings ?? [];
@@ -134,7 +135,7 @@ function Result({ data, color }: { data: Out; color: string }) {
         </div>
       ))}
       {codeIssues.length > 0 && (
-        <ul className="space-y-1">{codeIssues.map((w, i) => <li key={i} className={`rounded-lg border px-3 py-2 text-sm ${sev.blocker}`}>{t('hub.codeCheck', { v: w })}</li>)}</ul>
+        <ul className="space-y-1">{codeIssues.map((w, i) => <li key={i} className={`rounded-lg border px-3 py-2 text-sm ${sev.blocker}`}>{t('hub.codeCheck', { v: invoiceIssueText(w, lang) })}</li>)}</ul>
       )}
       {warnings.length > 0 && (
         <ul className="space-y-1">{warnings.map((w, i) => <li key={i} className={`rounded-lg border px-3 py-2 text-sm ${sev.warning}`}>{w}</li>)}</ul>
