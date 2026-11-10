@@ -1,10 +1,11 @@
 // لوحة توضيحية ثابتة: شكل ما يجري داخل الوكيل (مثال، ليست نتيجة حقيقية).
+import { t, type Lang } from '../../lib/i18n';
 const Line = ({ k, v, c }: { k?: string; v: string; c?: string }) => (
   <div className="leading-8">{k && <span className="text-[#94a3b8]">{k}: </span>}<span style={{ color: c ?? '#f1f5f9' }}>{v}</span></div>
 );
-export default function AgentConsole() {
+export default function AgentConsole({ lang = 'ar' }: { lang?: Lang }) {
   return (
-    <section dir="ltr" aria-label="مثال توضيحي لعمل الوكيل" className="overflow-hidden rounded-xl border border-[rgba(255,255,255,0.12)] bg-[#050b18] font-mono text-sm">
+    <section dir="ltr" aria-label={t(lang, 'home.console.aria')} className="overflow-hidden rounded-xl border border-[rgba(255,255,255,0.12)] bg-[#050b18] font-mono text-sm">
       <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.1)] bg-[#0c1426] px-4 py-3 text-xs text-[#94a3b8]">
         <span>UPAP Agent Console — accounting.invoice-reader</span>
         <span className="flex gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-[#ef4444]" /><i className="h-2.5 w-2.5 rounded-full bg-[#f59e0b]" /><i className="h-2.5 w-2.5 rounded-full bg-[#22c55e]" /></span>
@@ -23,7 +24,7 @@ export default function AgentConsole() {
           <span className="rounded border border-[rgba(212,162,74,0.5)] bg-[rgba(212,162,74,0.1)] px-3 py-1.5 text-[#e0b45a]">confidence 94%</span>
           <span className="rounded border border-[rgba(34,197,94,0.5)] bg-[rgba(34,197,94,0.1)] px-3 py-1.5 text-[#6ee7b7]">delivered ✓</span>
         </div>
-        <p className="mt-3 text-xs text-[#94a3b8]">مثال توضيحي لسير العمل، وليس نتيجة فعلية.</p>
+        <p className="mt-3 text-xs text-[#94a3b8]">{t(lang, 'home.console.caption')}</p>
       </div>
     </section>
   );

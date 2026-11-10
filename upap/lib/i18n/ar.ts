@@ -230,5 +230,7 @@ export const ar = {
   "issue.itemsSum": "مجموع البنود {sum} لا يساوي المجموع الفرعي {sub}",
   "issue.total": "{sub} + {tax} = {calc} لكن الإجمالي المكتوب {stated}",
   "issue.due": "تاريخ الاستحقاق يسبق تاريخ الفاتورة",
+  "home.console.aria": "مثال توضيحي لعمل الوكيل",
+  "home.console.caption": "مثال توضيحي لسير العمل، وليس نتيجة فعلية.",
 } as const;
 export type Dict = Record<keyof typeof ar, string>;

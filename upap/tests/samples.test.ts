@@ -14,6 +14,7 @@ test('كل وكيل في الفهرس له مثال بالعربية والإن�
       assert.ok(sm?.label && sm.file && sm.data?.output, `مثال ناقص: ${s}/${l}`);
     }
     assert.notEqual(SAMPLES[s].ar.label, SAMPLES[s].en.label, `مثال ${s} إنجليزي مطابق للعربي`);
+    assert.notEqual(SAMPLES[s].fr.label, SAMPLES[s].en.label, `مثال ${s} فرنسي مطابق للإنجليزي`);
   }
 });
 
@@ -21,7 +22,9 @@ test('اختيار لغة المثال من لغة التحليل', () => {
   assert.equal(sampleLang('ar-SY'), 'ar');
   assert.equal(sampleLang('ar'), 'ar');
   assert.equal(sampleLang('en-US'), 'en');
-  assert.equal(sampleLang('fr'), 'en');
+  assert.equal(sampleLang('fr'), 'fr');
+  assert.equal(sampleLang('fr-FR'), 'fr');
+  assert.equal(sampleLang('de'), 'en');
 });
 
 test('أمثلة الوكلاء العامّين: تحوي خطأً مقصوداً يكشفه الكود، وتتطابق اللغتان', () => {
@@ -32,11 +35,12 @@ test('أمثلة الوكلاء العامّين: تحوي خطأً مقصودا
     const flags = (o: any) => verifyChecks(o.checks).filter((c) => c.bad).length + verifyDates(o.date_checks).filter((d) => d.bad).length; // eslint-disable-line @typescript-eslint/no-explicit-any
     assert.ok(flags(ar) >= 1, `لا خطأ مقصود في ${s} (ar)`);
     assert.equal(flags(ar), flags(en), `اختلاف عدد الأخطاء بين اللغتين في ${s}`);
+    assert.equal(flags(SAMPLES[s].fr.data.output), flags(en), `اختلاف عدد الأخطاء في الفرنسية ${s}`);
   }
 });
 
 test('الفاتورة: كل مثال فيه خطأ في الإجمالي يكشفه الكود', () => {
-  for (const l of ['ar', 'en'] as const) {
+  for (const l of ['ar', 'en', 'fr'] as const) {
     assert.equal(verifyInvoice(SAMPLES['invoice-reader'][l].data.output).length, 1);
   }
 });

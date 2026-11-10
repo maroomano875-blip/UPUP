@@ -230,4 +230,6 @@ export const fr: Dict = {
   "issue.itemsSum": "La somme des postes est {sum}, et non le sous-total {sub}",
   "issue.total": "{sub} + {tax} = {calc} mais le total écrit est {stated}",
   "issue.due": "La date d’échéance précède la date de facture",
+  "home.console.aria": "Exemple illustratif du fonctionnement de l’agent",
+  "home.console.caption": "Illustration du déroulement, pas un résultat réel.",
 };

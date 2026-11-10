@@ -230,4 +230,6 @@ export const en: Dict = {
   "issue.itemsSum": "The items add up to {sum}, not the subtotal {sub}",
   "issue.total": "{sub} + {tax} = {calc} but the written total is {stated}",
   "issue.due": "The due date is before the invoice date",
+  "home.console.aria": "Illustrative example of how the agent works",
+  "home.console.caption": "An illustration of the workflow, not an actual result.",
 };
