@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { PROFESSIONS, liveAgents } from '../data/catalog';
-import { COUNTRIES, LANGUAGES, VOLATILE } from '../data/countries';
+import { COUNTRIES, VOLATILE, VERIFIED_COUNTRIES, isVerified, distinctLanguages } from '../data/countries';
 import { LAYERS } from '../data/layers';
 import { loadStats } from '../lib/stats';
 import AgentConsole from '../ui/components/AgentConsole';
@@ -28,7 +28,7 @@ export default async function Home() {
   const cards = [
     { label: T('home.card.prof'), value: PROFESSIONS.length, sub: T('home.card.profSub', { n: liveProf }) },
     { label: T('home.card.agents'), value: agents.length, sub: T('home.card.agentsSub') },
-    { label: T('home.card.countries'), value: COUNTRIES.length, sub: T('home.card.countriesSub', { n: COUNTRIES.filter((c) => c.restricted).length }) },
+    { label: T('home.card.countries'), value: COUNTRIES.length, sub: T('home.card.countriesSub', { v: VERIFIED_COUNTRIES.length }) },
     { label: T('home.card.requests'), value: stats.requests ?? '—', sub: stats.connected ? T('home.card.dbOn') : T('home.card.dbOff') },
   ];
 
@@ -51,7 +51,7 @@ export default async function Home() {
 
       <div className="mx-auto max-w-6xl px-5 py-8 space-y-12">
         <section className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-          {[[PROFESSIONS.length, T('home.big.prof')], [COUNTRIES.length, T('home.big.country')], [Object.keys(LANGUAGES).length, T('home.big.lang')], ['$0', T('home.big.capital')]].map(([v, l]) => (
+          {[[PROFESSIONS.length, T('home.big.prof')], [COUNTRIES.length, T('home.big.country')], [distinctLanguages(), T('home.big.lang')], ['$0', T('home.big.capital')]].map(([v, l]) => (
             <div key={String(l)} className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.7)] py-4">
               <div className="text-3xl font-bold text-[#e0b45a]">{v}</div><div className="text-xs text-[#cbd5e1] mt-1">{l}</div>
             </div>
@@ -145,6 +145,7 @@ export default async function Home() {
                 <div className="mt-2 flex flex-wrap gap-1">
                   {c.regs.map((r) => <span key={r} className="rounded bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] px-1.5 py-0.5 text-[11px] text-[#cbd5e1]">{staticText(r, lang)}</span>)}
                 </div>
+                <span className={`mt-2 inline-block rounded-full border px-2 py-0.5 text-[11px] ${isVerified(c.code) ? stateStyle.built : stateStyle.planned}`}>{isVerified(c.code) ? T('home.comp.verified') : T('home.comp.general')}</span>
                 {c.restricted && <div className="mt-2 rounded bg-[rgba(245,158,11,0.1)] border border-[rgba(245,158,11,0.3)] px-2 py-1 text-xs text-[#fcd34d]">{T('home.comp.restricted')}</div>}
                 {VOLATILE.includes(c.currency) && <div className="mt-1 text-[11px] text-[#64748b]">{T('home.comp.volatile')}</div>}
               </div>

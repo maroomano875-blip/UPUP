@@ -40,11 +40,12 @@ export interface RunAgentInput {
 }
 
 // ── بناء البرومبت مع حقن سياق الدولة واللغة ─────────────
-function buildPrompt(config: AgentConfig, input: RunAgentInput): string {
+// الاستبدال يشمل كل التكرارات (بعض البرومبتات تذكر {country} أكثر من مرة)
+export function buildPrompt(config: AgentConfig, input: RunAgentInput): string {
   return config.system_prompt_template
-    .replace("{country}", input.country)
-    .replace("{language}", input.language)
-    .replace("{context}", JSON.stringify(input.context ?? {})) +
+    .split("{country}").join(input.country)
+    .split("{language}").join(input.language)
+    .split("{context}").join(JSON.stringify(input.context ?? {})) +
     "\n\n" + countryDateContext(input.country);
 }
 

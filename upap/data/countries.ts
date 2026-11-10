@@ -1,4 +1,4 @@
-// 22 دولة: العملة، النظام الضريبي، اللوائح، وقيود الدفع (→ USDT).
+// الدول المتاحة: العملة، النظام الضريبي، اللوائح، وقيود الدفع (→ USDT).
 export interface Country {
   code: string; name_ar: string; flag: string; currency: string; locale: string;
   tax: string; dir: 'rtl' | 'ltr'; tz: string; regs: string[]; restricted: boolean;
@@ -67,3 +67,10 @@ export function complianceChecks(c: Country, professionSlug: string, lang: L3 = 
   if (professionSlug === 'accounting' && c.code === 'SA') out.push({ severity: 'info', text: L(lang, 'تحقق من متطلبات الفوترة الإلكترونية (ZATCA) عند الإصدار.', 'Check the e-invoicing (ZATCA) requirements when issuing.', 'Vérifiez les exigences de facturation électronique (ZATCA) lors de l’émission.') });
   return out;
 }
+
+// دول جُرّبت فعلياً من البداية للنهاية بملفات حقيقية على الموقع. الباقي «وضع عام»: يعمل بالاسم واللغة وتاريخ البلد
+// دون قواعد خاصة بها. أضف رمز الدولة هنا فقط بعد تجربة حقيقية.
+export const VERIFIED_COUNTRIES: string[] = ['SY'];
+export const isVerified = (code: string) => VERIFIED_COUNTRIES.includes(code);
+// عدد اللغات المميزة (ar-SA وar-EG لغة واحدة هي العربية)
+export const distinctLanguages = () => new Set(Object.keys(LANGUAGES).map((k) => k.split('-')[0])).size;

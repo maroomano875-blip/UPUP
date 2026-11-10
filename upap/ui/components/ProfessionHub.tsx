@@ -11,7 +11,7 @@ import { useI18n } from './I18nProvider';
 import { agentName, agentDesc, plannedName, profName } from '../../lib/i18n/catalog';
 import { countryName } from '../../lib/i18n/names';
 import { staticText } from '../../lib/i18n/catalog';
-import { COUNTRIES, LANGUAGES, VOLATILE, complianceChecks, fmtMoney, getCountry } from '../../data/countries';
+import { COUNTRIES, LANGUAGES, VOLATILE, complianceChecks, fmtMoney, getCountry, isVerified } from '../../data/countries';
 
 /* ---------- أنواع ونصوص ---------- */
 type Tab = 'run' | 'log' | 'clients' | 'new';
@@ -254,6 +254,7 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
                 {country.restricted && <span className="rounded border border-[rgba(245,158,11,0.4)] bg-[rgba(245,158,11,0.1)] px-2 py-0.5 text-xs text-[#fcd34d]">{t('hub.restricted')}</span>}
               </div>
               <p className="mt-2 text-xs text-[#94a3b8]">{staticText(country.tax, ui)}</p>
+              <p className={`mt-2 text-xs ${isVerified(code) ? 'text-[#6ee7b7]' : 'text-[#fcd34d]'}`}>{isVerified(code) ? t('hub.country.verified') : t('hub.country.general')}</p>
             </Step>
             <Step n={2} title={t('hub.step.lang')} color={p.color}>
               <select className={fieldCls} value={lang} onChange={(e) => setLang(e.target.value)}>
