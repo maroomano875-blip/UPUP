@@ -70,7 +70,7 @@ export function complianceChecks(c: Country, professionSlug: string, lang: L3 = 
 
 // دول جُرّبت فعلياً من البداية للنهاية بملفات حقيقية على الموقع. الباقي «وضع عام»: يعمل بالاسم واللغة وتاريخ البلد
 // دون قواعد خاصة بها. أضف رمز الدولة هنا فقط بعد تجربة حقيقية.
-export const VERIFIED_COUNTRIES: string[] = ['SY'];
+export const VERIFIED_COUNTRIES: string[] = ['SA', 'AE', 'SY', 'EG', 'US', 'GB', 'FR']; // جرّبها صاحب المشروع فعلياً بمستندات حقيقية
 export const isVerified = (code: string) => VERIFIED_COUNTRIES.includes(code);
 // عدد اللغات المميزة (ar-SA وar-EG لغة واحدة هي العربية)
 export const distinctLanguages = () => new Set(Object.keys(LANGUAGES).map((k) => k.split('-')[0])).size;
