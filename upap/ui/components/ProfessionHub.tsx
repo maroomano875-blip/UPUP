@@ -5,6 +5,7 @@ import { SAMPLES, sampleLang } from '../../data/samples';
 import MedicalResult from './MedicalResult';
 import EngineeringResult from './EngineeringResult';
 import GenericResult from './GenericResult';
+import CurrencyEquiv from './CurrencyEquiv';
 import { verifyInvoice } from '../../lib/verify';
 import { invoiceIssueText } from '../../lib/i18n/format';
 import { useI18n } from './I18nProvider';
@@ -97,7 +98,7 @@ function Step({ n, title, color, children }: { n: number; title: string; color: 
 }
 
 /* ---------- عرض النتيجة ---------- */
-function Result({ data, color }: { data: Out; color: string }) {
+function Result({ data, color, localCur, locale }: { data: Out; color: string; localCur: string; locale: string }) {
   const { t, lang } = useI18n();
   const o: Out = data.output ?? {};
   const conf = Math.round((data.confidence_score ?? 0) * 100);
@@ -125,6 +126,7 @@ function Result({ data, color }: { data: Out; color: string }) {
         <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
           {rows.map(([k, v]) => (<div key={k}><dt className="text-xs text-[#94a3b8]">{k}</dt><dd className="text-[#f1f5f9]" dir="auto">{v || '—'}</dd></div>))}
         </dl>
+        {!isContract && <CurrencyEquiv total={o.total} docCur={o.currency} localCur={localCur} locale={locale} />}
         {o.executive_summary_ar && <p className="mt-3 text-sm leading-7 text-[#cbd5e1]">{o.executive_summary_ar}</p>}
       </div>
       {isContract && (o.clauses as Out[]).map((c, i) => (
@@ -299,7 +301,7 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
                   )}
                   {st === 'done' && badge && <div className={`mt-4 rounded-lg border px-4 py-2 text-xs ${sev.info}`}>{badge}</div>}
                   {st === 'error' && <div className={`mt-4 rounded-lg border px-4 py-3 text-sm leading-7 ${sev.blocker}`} dir="auto">⚠ {err}</div>}
-                  {st === 'done' && res && <Result data={res} color={p.color} />}
+                  {st === 'done' && res && <Result data={res} color={p.color} localCur={country.currency} locale={country.locale} />}
                 </Step>
               </>
             )}
