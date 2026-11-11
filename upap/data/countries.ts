@@ -74,3 +74,10 @@ export const VERIFIED_COUNTRIES: string[] = ['SY'];
 export const isVerified = (code: string) => VERIFIED_COUNTRIES.includes(code);
 // عدد اللغات المميزة (ar-SA وar-EG لغة واحدة هي العربية)
 export const distinctLanguages = () => new Set(Object.keys(LANGUAGES).map((k) => k.split('-')[0])).size;
+
+// النسبة القياسية لضريبة القيمة المضافة كما هي مدوَّنة في حقل tax أعلاه (استرشادية وقد تتغير؛ تخفيضات وإعفاءات مشروعة قد تخالفها).
+// دولة غير مذكورة هنا = لا يُجرى فحص نسبة لها (نظام غير موحَّد أو نطاق نسب).
+export const STANDARD_VAT: Record<string, number[]> = {
+  GB: [20], FR: [20], DE: [19], ES: [21], IT: [22], SA: [15], AE: [5], EG: [14], JO: [16], LB: [11],
+  MA: [20], DZ: [19], BH: [10], OM: [5], TR: [20], AU: [10], PK: [18], ID: [11, 12],
+};

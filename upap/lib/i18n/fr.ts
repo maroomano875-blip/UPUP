@@ -103,6 +103,7 @@ export const fr: Dict = {
   'hub.row.debit': "Débit : {v}",
   'hub.recommend': "Recommandation : {v}",
   'hub.codeCheck': "Contrôle automatique par code : {v}",
+  "vat.diff": "Le taux de taxe implicite de la facture est de {implied}, alors que le taux standard enregistré pour votre pays est de {rates} (indicatif, peut être obsolète). Il peut s’agir d’un taux réduit ou d’une exonération légitimes, ou d’une erreur du document — à vérifier.",
   "cur.diff": "La devise du document ({doc}) diffère de celle de votre pays ({local}). Vérifiez que la devise écrite dans le document est bien celle voulue.",
   "cur.decimals": "Les montants en {cur} ont normalement au plus {max} décimales, mais {found} ont été trouvées. Il peut s’agir d’une erreur de lecture ou de saisie — vérifiez le document.",
   'hub.sev.blocker': "Bloquant",

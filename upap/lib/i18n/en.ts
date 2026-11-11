@@ -103,6 +103,7 @@ export const en: Dict = {
   'hub.row.debit': "Debit: {v}",
   'hub.recommend': "Recommendation: {v}",
   'hub.codeCheck': "Automatic code check: {v}",
+  "vat.diff": "The invoice’s implied tax rate is {implied}, while the standard rate recorded for your country is {rates} (indicative, may be out of date). It may be a legitimate reduced rate or exemption, or an error in the document — please check.",
   "cur.diff": "The document currency ({doc}) differs from your country’s currency ({local}). Make sure the currency written in the document is the intended one.",
   "cur.decimals": "Amounts in {cur} normally have at most {max} decimal places, but {found} were found. This may be a reading or typing error — check the document.",
   'hub.sev.blocker': "Blocker",

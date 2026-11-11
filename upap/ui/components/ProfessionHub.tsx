@@ -7,8 +7,9 @@ import EngineeringResult from './EngineeringResult';
 import GenericResult from './GenericResult';
 import CurrencyEquiv from './CurrencyEquiv';
 import { currencyAdvisories } from '../../lib/currencyChecks';
+import { vatAdvisory } from '../../lib/vatCheck';
 import { verifyInvoice } from '../../lib/verify';
-import { invoiceIssueText, curAdvisoryText } from '../../lib/i18n/format';
+import { invoiceIssueText, curAdvisoryText, vatAdvisoryText } from '../../lib/i18n/format';
 import { useI18n } from './I18nProvider';
 import { agentName, agentDesc, plannedName, profName } from '../../lib/i18n/catalog';
 import { countryName } from '../../lib/i18n/names';
@@ -99,7 +100,7 @@ function Step({ n, title, color, children }: { n: number; title: string; color: 
 }
 
 /* ---------- عرض النتيجة ---------- */
-function Result({ data, color, localCur, locale }: { data: Out; color: string; localCur: string; locale: string }) {
+function Result({ data, color, localCur, locale, countryCode }: { data: Out; color: string; localCur: string; locale: string; countryCode: string }) {
   const { t, lang } = useI18n();
   const o: Out = data.output ?? {};
   const conf = Math.round((data.confidence_score ?? 0) * 100);
@@ -138,6 +139,7 @@ function Result({ data, color, localCur, locale }: { data: Out; color: string; l
         </div>
       ))}
       {!isContract && currencyAdvisories(o, localCur).map((a, i) => <p key={`c${i}`} className={`rounded-lg border px-3 py-2 text-sm leading-7 ${sev.info}`}>{curAdvisoryText(a, lang)}</p>)}
+      {!isContract && (() => { const v = vatAdvisory(o, countryCode, localCur); return v ? <p className={`rounded-lg border px-3 py-2 text-sm leading-7 ${sev.info}`}>{vatAdvisoryText(v, lang)}</p> : null; })()}
       {codeIssues.length > 0 && (
         <ul className="space-y-1">{codeIssues.map((w, i) => <li key={i} className={`rounded-lg border px-3 py-2 text-sm ${sev.blocker}`}>{t('hub.codeCheck', { v: invoiceIssueText(w, lang) })}</li>)}</ul>
       )}
@@ -303,7 +305,7 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
                   )}
                   {st === 'done' && badge && <div className={`mt-4 rounded-lg border px-4 py-2 text-xs ${sev.info}`}>{badge}</div>}
                   {st === 'error' && <div className={`mt-4 rounded-lg border px-4 py-3 text-sm leading-7 ${sev.blocker}`} dir="auto">⚠ {err}</div>}
-                  {st === 'done' && res && <Result data={res} color={p.color} localCur={country.currency} locale={country.locale} />}
+                  {st === 'done' && res && <Result data={res} color={p.color} localCur={country.currency} locale={country.locale} countryCode={country.code} />}
                 </Step>
               </>
             )}

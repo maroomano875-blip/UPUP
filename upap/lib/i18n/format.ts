@@ -19,3 +19,8 @@ export function curAdvisoryText(a: CurAdvisory, lang: Lang): string {
     ? t(lang, 'cur.diff', { doc: a.doc, local: a.local })
     : t(lang, 'cur.decimals', { cur: a.cur, max: a.max, found: a.found });
 }
+
+import type { VatAdvisory } from '../vatCheck';
+export function vatAdvisoryText(a: VatAdvisory, lang: Lang): string {
+  return t(lang, 'vat.diff', { implied: `\u2066${a.implied}%\u2069`, rates: `\u2066${a.rates.join('% / ')}%\u2069` });
+}
