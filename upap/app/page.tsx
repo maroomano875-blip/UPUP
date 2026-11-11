@@ -20,7 +20,7 @@ const stateStyle: Record<string, string> = {
 function fmt(v: unknown) { return v == null ? '' : typeof v === 'string' ? v : JSON.stringify(v); }
 
 export default async function Home() {
-  const lang = getLang();
+  const lang = await getLang();
   const T = (k: Parameters<typeof t>[1], v?: Record<string, string | number>) => t(lang, k, v);
   const stats = await loadStats();
   const agents = liveAgents();

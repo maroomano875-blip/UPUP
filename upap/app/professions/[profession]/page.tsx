@@ -9,10 +9,12 @@ import ProfessionHub from '../../../ui/components/ProfessionHub';
 export const dynamic = 'force-dynamic';
 export function generateStaticParams() { return PROFESSIONS.map((p) => ({ profession: p.slug })); }
 
-export default function ProfessionPage({ params, searchParams }: { params: { profession: string }; searchParams: { agent?: string } }) {
+export default async function ProfessionPage(props: { params: Promise<{ profession: string }>; searchParams: Promise<{ agent?: string }> }) {
+  const params = await props.params;
+  const searchParams = await props.searchParams;
   const p = getProfession(params.profession);
   if (!p) notFound();
-  const lang = getLang();
+  const lang = await getLang();
   return (
     <main style={{ backgroundImage: `radial-gradient(900px 400px at 50% -100px, ${p.color}22, transparent)` }} className="min-h-screen bg-[#020617] text-[#f1f5f9]" dir={dirOf(lang)}>
       <header className="border-b border-[rgba(255,255,255,0.1)]" style={{ background: `linear-gradient(135deg, #0f172a 0%, ${p.color}66 140%)` }}>
