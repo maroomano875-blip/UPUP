@@ -62,3 +62,12 @@ test('كل دولة: تاريخ وعملة وفحوص امتثال بالثلا�
 test('الدول المُجرَّبة فعلياً موجودة في القائمة', () => {
   for (const v of VERIFIED_COUNTRIES) assert.ok(CODES.includes(v), v);
 });
+
+test('وكيلا الفاتورة والعقد يغطيان كل الدول المعروفة (لا قوائم أضيق من الواجهة)', async () => {
+  const cfgs = await loadConfigs();
+  for (const id of ['invoice-reader', 'contract-reviewer']) {
+    const c = cfgs.find((x) => x.id === id || x.id.includes(id));
+    assert.ok(c, id);
+    for (const k of CODES) assert.ok(c!.supported_countries.includes(k), `${id}: ${k} غائبة`);
+  }
+});

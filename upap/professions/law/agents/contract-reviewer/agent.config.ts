@@ -13,8 +13,14 @@ export const CONTRACT_REVIEWER_CONFIG: AgentConfig = {
   version: "1.0.0",
   status: "active",
 
-  supported_countries: ["US", "GB", "SA", "AE", "EG", "SY"],
-  supported_languages: ["en-US", "en-GB", "ar", "ar-SA", "ar-EG", "ar-SY"],
+  supported_countries: [
+    "US", "GB", "FR", "DE", "ES", "IT", "SA", "AE", "EG", "SY", "JO", "LB", "MA", "DZ",
+    "IQ", "KW", "QA", "BH", "OM", "YE", "TR", "CA", "AU", "IN", "PK", "ID", "BR",
+  ],
+  supported_languages: [
+    "en-US", "en-GB", "en-IN", "ar", "ar-SA", "ar-EG", "ar-SY",
+    "fr", "es", "tr", "de", "it", "pt-BR", "id", "hi", "ur",
+  ],
   supported_currencies: [],
 
   input_types: ["pdf", "image", "text"],
