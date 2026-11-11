@@ -103,6 +103,8 @@ export const en: Dict = {
   'hub.row.debit': "Debit: {v}",
   'hub.recommend': "Recommendation: {v}",
   'hub.codeCheck': "Automatic code check: {v}",
+  "cur.diff": "The document currency ({doc}) differs from your country’s currency ({local}). Make sure the currency written in the document is the intended one.",
+  "cur.decimals": "Amounts in {cur} normally have at most {max} decimal places, but {found} were found. This may be a reading or typing error — check the document.",
   'hub.sev.blocker': "Blocker",
   'hub.sev.warning': "Warning",
   'hub.sev.info': "Info",

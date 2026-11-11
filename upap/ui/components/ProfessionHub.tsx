@@ -6,8 +6,9 @@ import MedicalResult from './MedicalResult';
 import EngineeringResult from './EngineeringResult';
 import GenericResult from './GenericResult';
 import CurrencyEquiv from './CurrencyEquiv';
+import { currencyAdvisories } from '../../lib/currencyChecks';
 import { verifyInvoice } from '../../lib/verify';
-import { invoiceIssueText } from '../../lib/i18n/format';
+import { invoiceIssueText, curAdvisoryText } from '../../lib/i18n/format';
 import { useI18n } from './I18nProvider';
 import { agentName, agentDesc, plannedName, profName } from '../../lib/i18n/catalog';
 import { countryName } from '../../lib/i18n/names';
@@ -136,6 +137,7 @@ function Result({ data, color, localCur, locale }: { data: Out; color: string; l
           <p className="mt-1 text-xs leading-6 opacity-90">{t('hub.recommend', { v: c.recommendation })}</p>
         </div>
       ))}
+      {!isContract && currencyAdvisories(o, localCur).map((a, i) => <p key={`c${i}`} className={`rounded-lg border px-3 py-2 text-sm leading-7 ${sev.info}`}>{curAdvisoryText(a, lang)}</p>)}
       {codeIssues.length > 0 && (
         <ul className="space-y-1">{codeIssues.map((w, i) => <li key={i} className={`rounded-lg border px-3 py-2 text-sm ${sev.blocker}`}>{t('hub.codeCheck', { v: invoiceIssueText(w, lang) })}</li>)}</ul>
       )}

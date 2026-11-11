@@ -72,8 +72,7 @@ function invoiceIssuesWith(o: any, conv: Conv, seen: { amb: boolean }): InvoiceI
   const out = invoiceItemIssues(o, conv, seen);
   const sub = toNum(o?.subtotal), tax = toNum(o?.tax) ?? 0, tot = toNum(o?.total);
   if (sub && tot && !near(sub + tax, tot)) out.push({ code: 'total', sub, tax, calc: r2(sub + tax), stated: tot });
-  const a = Date.parse(String(o?.invoice_date)), b = Date.parse(String(o?.due_date));
-  if (Number.isFinite(a) && Number.isFinite(b) && b < a) out.push({ code: 'due' });
+  if (verifyDates([{ start: o?.invoice_date, end: o?.due_date }])[0].bad) out.push({ code: 'due' }); // بحسب تقويم الملف
   return out;
 }
 

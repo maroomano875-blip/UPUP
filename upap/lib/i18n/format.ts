@@ -12,3 +12,10 @@ export function invoiceIssueText(i: InvoiceIssue, lang: Lang): string {
     case 'due': return t(lang, 'issue.due');
   }
 }
+
+import type { CurAdvisory } from '../currencyChecks';
+export function curAdvisoryText(a: CurAdvisory, lang: Lang): string {
+  return a.code === 'curDiff'
+    ? t(lang, 'cur.diff', { doc: a.doc, local: a.local })
+    : t(lang, 'cur.decimals', { cur: a.cur, max: a.max, found: a.found });
+}
