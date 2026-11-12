@@ -7,7 +7,8 @@ export async function GET() {
   const has = (k: string) => !!process.env[k];
   return NextResponse.json({
     vercel_env: process.env.VERCEL_ENV ?? null,
-    supabase_url: has('SUPABASE_URL') || has('NEXT_PUBLIC_SUPABASE_URL'),
+    SUPABASE_URL: has('SUPABASE_URL'),
+    NEXT_PUBLIC_SUPABASE_URL: has('NEXT_PUBLIC_SUPABASE_URL'),
     supabase_service_key: has('SUPABASE_SERVICE_ROLE_KEY'),
     openrouter: has('OPENROUTER_API_KEY'),
     gemini: has('GEMINI_API_KEY'),
