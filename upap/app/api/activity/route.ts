@@ -14,7 +14,7 @@ export async function GET(req: Request) {
   try {
     const db = createClient(url, key, { auth: { persistSession: false }, global: { fetch: (u: RequestInfo | URL, i?: RequestInit) => fetch(u, { ...i, cache: 'no-store' }) } });
     const au = await db.from('audit_log').select('*').order('created_at', { ascending: false }).limit(16);
-    // قائمة مسموحة: حقول تقنية فقط. لا هوية عميل ولا معرّفات ولا نصوص أخطاء (قد تحوي مقاطع من مستندات).
+    // قائمة مسموحة: حقول تقنية فقط (المعرّف الداخلي للطلب لا يُرسَل أيضاً). لا هوية عميل ولا معرّفات ولا نصوص أخطاء (قد تحوي مقاطع من مستندات).
     const SAFE = ['provider', 'model', 'latency', 'time_ms', 'confidence', 'needs_human', 'reviewer_notes'];
     const audit = (au.data ?? []).map((r: Record<string, unknown>) => ({
       at: String(r.created_at ?? ''),
@@ -31,7 +31,6 @@ export async function GET(req: Request) {
       })
       .slice(0, 25)
       .map((r: Record<string, unknown>) => ({
-        id: String(r.id ?? ''),
         status: String(r.status ?? ''),
         agent: String(r.agent_slug ?? r.agent ?? r.agent_id ?? ''),
         country: String(r.country ?? ''),

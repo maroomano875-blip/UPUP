@@ -21,7 +21,7 @@ type Tab = 'run' | 'log' | 'clients' | 'new';
 interface Client { id: string; name: string; note: string }
 interface Run { id: string; clientId: string; agent: string; file: string; confidence: number; at: string; summary: string }
 interface Audit { at: string; event: string; detail: string }
-interface Row { id: string; status: string; agent: string; country: string; confidence: number | null; created_at: string }
+interface Row { status: string; agent: string; country: string; confidence: number | null; created_at: string }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Out = Record<string, any>;
 
@@ -364,8 +364,8 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
             {rows && !connected && <p className="mt-3 text-sm text-[#fcd34d]">{t('hub.log.dbOff')}</p>}
             {rows && connected && rows.length === 0 && <p className="mt-3 text-sm text-[#94a3b8]">{t('hub.log.noReq')}</p>}
             <ul className="mt-3 divide-y divide-[rgba(255,255,255,0.1)]">
-              {(rows ?? []).map((r) => (
-                <li key={r.id} className="flex flex-wrap justify-between gap-2 py-2 text-sm">
+              {(rows ?? []).map((r, i) => (
+                <li key={`${r.created_at}-${i}`} className="flex flex-wrap justify-between gap-2 py-2 text-sm">
                   <span>{['delivered', 'needs_human', 'received', 'parsing', 'processing', 'reviewing', 'failed'].includes(r.status) ? t(`hub.status.${r.status}` as 'hub.status.failed') : r.status} <span className="text-[#94a3b8]">{r.agent}</span></span>
                   <span className="text-xs text-[#94a3b8]" dir="ltr">{r.confidence != null ? `${Math.round(r.confidence * 100)}% · ` : ''}{r.created_at.slice(0, 16).replace('T', ' ')}</span>
                 </li>
