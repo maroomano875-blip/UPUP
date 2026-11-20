@@ -1,0 +1,105 @@
+'use client';
+// لوحة تسجيل الدخول: Google دائماً، والإيميل + كلمة المرور خلف مفتاح تشغيل
+// (NEXT_PUBLIC_EMAIL_AUTH=on) حتى يُربط Brevo لإرسال رسائل التأكيد.
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useI18n } from './I18nProvider';
+import { getBrowserSupabase } from '../../lib/supabaseBrowser';
+import { authErrorKey, isAllowedEmailDomain, normalizeEmail, passwordIssue } from '../../lib/authPolicy';
+
+type Msg = { kind: 'ok' | 'err'; text: string } | null;
+
+export default function AuthPanel() {
+  const { t } = useI18n();
+  const router = useRouter();
+  const sb = getBrowserSupabase();
+  const emailOn = process.env.NEXT_PUBLIC_EMAIL_AUTH === 'on';
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<Msg>(null);
+
+  // بعد نجاح الدخول (بما فيه العودة من Google) ننتقل للرئيسية
+  useEffect(() => {
+    if (!sb) return;
+    sb.auth.getSession().then(({ data }) => { if (data.session) router.replace('/'); });
+    const { data: sub } = sb.auth.onAuthStateChange((_e, session) => { if (session) router.replace('/'); });
+    return () => sub.subscription.unsubscribe();
+  }, [sb, router]);
+
+  async function google() {
+    if (!sb) return setMsg({ kind: 'err', text: t('auth.err.config') });
+    setBusy(true); setMsg(null);
+    const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/login` } });
+    if (error) { setMsg({ kind: 'err', text: t(authErrorKey(error.message)) }); setBusy(false); }
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!sb) return setMsg({ kind: 'err', text: t('auth.err.config') });
+    const em = normalizeEmail(email);
+    if (mode === 'signup') {
+      if (!isAllowedEmailDomain(em)) return setMsg({ kind: 'err', text: t('auth.err.domain') });
+      if (passwordIssue(password)) return setMsg({ kind: 'err', text: t('auth.err.password') });
+    }
+    setBusy(true); setMsg(null);
+    if (mode === 'signup') {
+      const { error } = await sb.auth.signUp({ email: em, password, options: { emailRedirectTo: `${window.location.origin}/login` } });
+      setMsg(error ? { kind: 'err', text: t(authErrorKey(error.message)) } : { kind: 'ok', text: t('auth.ok.confirm') });
+    } else {
+      const { error } = await sb.auth.signInWithPassword({ email: em, password });
+      if (error) setMsg({ kind: 'err', text: t(authErrorKey(error.message)) });
+    }
+    setBusy(false);
+  }
+
+  const input = 'w-full rounded-lg border border-[rgba(255,255,255,0.15)] bg-[rgba(2,6,23,0.8)] px-3 py-2.5 text-sm text-[#f1f5f9] outline-none focus:border-[#e0b45a]';
+
+  return (
+    <div className="mx-auto w-full max-w-sm rounded-2xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.7)] p-6">
+      <h1 className="text-2xl font-bold">{t('auth.title')}</h1>
+
+      <button onClick={google} disabled={busy || !sb}
+        className="mt-5 w-full rounded-lg bg-[#e0b45a] px-4 py-3 text-sm font-bold text-[#020617] disabled:opacity-50">
+        {t('auth.google')}
+      </button>
+
+      {emailOn && (
+        <>
+          <div className="my-5 flex items-center gap-3 text-xs text-[#64748b]">
+            <span className="h-px flex-1 bg-[rgba(255,255,255,0.1)]" />{t('auth.or')}<span className="h-px flex-1 bg-[rgba(255,255,255,0.1)]" />
+          </div>
+          <div className="mb-3 grid grid-cols-2 gap-1 rounded-lg bg-[rgba(2,6,23,0.6)] p-1 text-xs font-semibold">
+            {(['signin', 'signup'] as const).map((m) => (
+              <button key={m} type="button" onClick={() => { setMode(m); setMsg(null); }} aria-pressed={mode === m}
+                className={`rounded-md py-2 ${mode === m ? 'bg-[rgba(255,255,255,0.12)] text-[#f1f5f9]' : 'text-[#94a3b8]'}`}>
+                {t(m === 'signin' ? 'auth.mode.signin' : 'auth.mode.signup')}
+              </button>
+            ))}
+          </div>
+          <form onSubmit={submit} className="space-y-3">
+            <input type="email" required autoComplete="email" dir="ltr" value={email} onChange={(e) => setEmail(e.target.value)}
+              placeholder={t('auth.email')} aria-label={t('auth.email')} className={input} />
+            <input type="password" required autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} dir="ltr"
+              value={password} onChange={(e) => setPassword(e.target.value)}
+              placeholder={t('auth.password')} aria-label={t('auth.password')} className={input} />
+            {mode === 'signup' && <p className="text-xs leading-6 text-[#94a3b8]">{t('auth.hint.domain')} {t('auth.hint.password')}</p>}
+            <button type="submit" disabled={busy || !sb}
+              className="w-full rounded-lg border border-[rgba(255,255,255,0.2)] px-4 py-2.5 text-sm font-bold disabled:opacity-50">
+              {t(mode === 'signin' ? 'auth.submit.signin' : 'auth.submit.signup')}
+            </button>
+          </form>
+        </>
+      )}
+
+      {msg && (
+        <p role="status" className={`mt-4 rounded-lg px-3 py-2 text-sm leading-6 ${msg.kind === 'ok' ? 'bg-[rgba(16,185,129,0.15)] text-[#6ee7b7]' : 'bg-[rgba(239,68,68,0.15)] text-[#fca5a5]'}`}>{msg.text}</p>
+      )}
+      {!sb && <p className="mt-4 text-sm text-[#fca5a5]">{t('auth.err.config')}</p>}
+
+      <Link href="/" className="mt-6 block text-center text-xs text-[#a5b4fc]">{t('auth.back')}</Link>
+    </div>
+  );
+}
