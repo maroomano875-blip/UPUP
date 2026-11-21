@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useI18n } from './I18nProvider';
 import AuthPanel from './AuthPanel';
+import HistoryList from './HistoryList';
 import { getBrowserSupabase } from '../../lib/supabaseBrowser';
 import { canInvite, canInviteRole, canRemove, formatInviteCode, officeErrorKey, type OfficeRole } from '../../lib/officePolicy';
 
@@ -140,6 +141,7 @@ export default function OfficePanel() {
               <button type="submit" disabled={busy} className={`${btn} w-full`}>{t('office.join.btn')}</button>
             </form>
           )}
+          <div className="mt-6"><HistoryList uid={uid} emails={{}} /></div>
         </div>
       )}
 
@@ -197,6 +199,8 @@ export default function OfficePanel() {
               </ul>
             </div>
           )}
+
+          <HistoryList uid={uid!} emails={Object.fromEntries(members.map((m) => [m.user_id, m.email]))} />
 
           {mine.role !== 'owner' && (
             <button disabled={busy} className="fx-press text-sm font-semibold text-[#fca5a5]"

@@ -13,6 +13,14 @@ async function sha(s: string): Promise<string> {
   return Array.from(new Uint8Array(h)).map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 24);
 }
 
+// نمرّر هوية المستخدم الموثَّقة للمسار عبر ترويسة داخلية؛ نحذف أي قيمة أرسلها العميل (منع الانتحال)
+function pass(req: NextRequest, userId: string | null) {
+  const fwd = new Headers(req.headers);
+  fwd.delete('x-upap-uid');
+  if (userId) fwd.set('x-upap-uid', userId);
+  return NextResponse.next({ request: { headers: fwd } });
+}
+
 export async function middleware(req: NextRequest) {
   if (req.method !== 'POST') return NextResponse.next();
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -28,7 +36,7 @@ export async function middleware(req: NextRequest) {
       return NextResponse.json({ error: 'auth_required', code: 'auth_required' }, { status: 401 });
     }
   }
-  if (!base || !key) return NextResponse.next();
+  if (!base || !key) return pass(req, userId);
 
   const h: Record<string, string> = key.startsWith('eyJ') ? { apikey: key, Authorization: `Bearer ${key}` } : { apikey: key };
   const ip = (req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown').split(',')[0].trim();
@@ -64,5 +72,5 @@ export async function middleware(req: NextRequest) {
     // عطل في العدّاد: لا نمنع المستخدم، لكن نسجّل السبب في الجدول للفحص.
     try { await fetch(`${base}/rest/v1/rate_hits`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ key: 'err:' + String(e).slice(0, 100) }) }); } catch { /* تجاهل */ }
   }
-  return NextResponse.next();
+  return pass(req, userId);
 }

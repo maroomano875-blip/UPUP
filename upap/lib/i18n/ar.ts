@@ -323,5 +323,16 @@ export const ar = {
   "office.add": "إضافة عضو",
   "office.tip": "قائمة «مكتبي» موجودة هنا بالداخل: أنشئ مكتباً أو انضم لمكتب، وأضف أعضاءك.",
   "office.tip.ok": "فهمت",
+  "history.title": "سجل التحاليل (آخر 30 يوماً)",
+  "history.empty": "لا توجد تحاليل محفوظة بعد. تظهر هنا ملخصات تحاليلك الجديدة.",
+  "history.note": "نحفظ ملخصاً فقط (لا المستند الأصلي) ويُحذف بعد 30 يوماً.",
+  "history.items": "{n} عنصر",
+  "history.sections": "{n} قسم",
+  "history.tests": "{n} فحص",
+  "history.clauses": "{n} بند",
+  "history.confidence": "الثقة {n}%",
+  "history.review": "يحتاج مراجعة بشرية",
+  "history.mine": "أنت",
+  "history.more": "عرض المزيد",
 } as const;
 export type Dict = Record<keyof typeof ar, string>;

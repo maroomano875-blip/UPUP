@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAgent } from "../core/factory/createAgent";
 import { readUpload, UnreadableFileError } from "./readUpload";
 import type { AgentConfig } from "../core/types/agent";
+import { recordAnalysis } from "./analysisHistory";
 
 // معرّف العميل التجريبي الثابت. لا نقبل client_id من المتصفح (انتحال هوية)؛ يُستبدل بالمصادقة لاحقاً.
 const DEMO_CLIENT_ID = "00000000-0000-0000-0000-000000000001";
@@ -42,6 +43,8 @@ export function makeAgentRoute(config: AgentConfig, label: string) {
         imageBase64: read.imageBase64,
         context: { file_name: file.name },
       });
+      // سجل الملخصات (30 يوماً): الهوية من ترويسة وضعها middleware بعد التحقق، لا من العميل
+      if (result.status !== "failed") await recordAnalysis({ userId: req.headers.get("x-upap-uid"), agentSlug: label, country, fileName: file.name, result });
       return NextResponse.json(result);
     } catch (err) {
       // رسائل قراءة الملف مكتوبة للمستخدم عمداً؛ أي خطأ آخر داخلي فلا يُكشف تفصيله
