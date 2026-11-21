@@ -32,3 +32,28 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 [lang="ar"], [dir="rtl"] { font-family: var(--ff-arabic); }
+
+
+/* ── حركة خفيفة للواجهات الجديدة (تسجيل الدخول و«مكتبي»): تُعطَّل عند «تقليل الحركة» ── */
+.fx-aurora { position: relative; overflow: hidden; isolation: isolate; }
+.fx-aurora::before, .fx-aurora::after {
+  content: ''; position: absolute; z-index: -1; width: 70vmax; height: 70vmax; border-radius: 50%;
+  filter: blur(70px); opacity: .35; pointer-events: none; will-change: transform;
+}
+.fx-aurora::before { top: -30vmax; inset-inline-start: -20vmax; background: radial-gradient(circle, #e0b45a 0%, transparent 65%); animation: fx-drift 16s ease-in-out infinite alternate; }
+.fx-aurora::after { bottom: -35vmax; inset-inline-end: -25vmax; background: radial-gradient(circle, #4f46e5 0%, transparent 65%); animation: fx-drift 20s ease-in-out infinite alternate-reverse; }
+@keyframes fx-drift { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(6vmax,5vmax,0) scale(1.18); } }
+@keyframes fx-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+.fx-rise { animation: fx-rise .55s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes fx-pop { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
+.fx-pop { animation: fx-pop .3s ease-out both; }
+@keyframes fx-glow { 0%,100% { box-shadow: 0 0 0 0 rgba(224,180,90,.45); } 50% { box-shadow: 0 0 0 10px rgba(224,180,90,0); } }
+.fx-glow { animation: fx-glow 2.6s ease-in-out infinite; }
+@keyframes fx-dot { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.7); opacity: .45; } }
+.fx-dot { animation: fx-dot 1.6s ease-in-out infinite; }
+.fx-card { border: 1px solid rgba(255,255,255,.12); background: rgba(15,23,42,.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-radius: 1.25rem; box-shadow: 0 20px 50px -20px rgba(0,0,0,.6); }
+.fx-press { transition: transform .15s ease, opacity .15s ease; }
+.fx-press:active { transform: scale(.97); }
+@media (prefers-reduced-motion: reduce) {
+  .fx-aurora::before, .fx-aurora::after, .fx-rise, .fx-pop, .fx-glow, .fx-dot { animation: none !important; }
+}

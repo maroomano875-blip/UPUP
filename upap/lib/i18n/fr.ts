@@ -318,4 +318,9 @@ export const fr: Dict = {
   "office.err.owner_cannot_leave": "Le propriétaire ne peut pas quitter le bureau.",
   "office.err.too_many_pending_invites": "Vous avez 20 invitations en attente. Attendez qu'elles expirent ou soient utilisées.",
   "office.err.generic": "Action impossible. Réessayez dans un instant.",
+  "office.afterLogin": "Après connexion, « Mon bureau » est toujours dans la pastille en haut. C'est facultatif : les particuliers continuent comme avant.",
+  "office.signinTitle": "Connectez-vous pour gérer votre bureau",
+  "office.add": "Ajouter un membre",
+  "office.tip": "« Mon bureau » est ici : créez ou rejoignez un bureau et ajoutez vos membres.",
+  "office.tip.ok": "Compris",
 };

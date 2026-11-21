@@ -10,7 +10,8 @@ import { authErrorKey, isAllowedEmailDomain, normalizeEmail, passwordIssue } fro
 
 type Msg = { kind: 'ok' | 'err'; text: string } | null;
 
-export default function AuthPanel() {
+// embedded: يُعرض داخل صفحة أخرى (لا يعيد التوجيه ولا يعرض رابط العودة)؛ next: وجهة ما بعد الدخول
+export default function AuthPanel({ embedded = false, next }: { embedded?: boolean; next?: string }) {
   const { t } = useI18n();
   const router = useRouter();
   const sb = getBrowserSupabase();
@@ -21,17 +22,26 @@ export default function AuthPanel() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<Msg>(null);
 
-  // بعد نجاح الدخول (بما فيه العودة من Google) ننتقل للرئيسية
+  // وجهة ما بعد الدخول: next أو ما حُفظ قبل الذهاب إلى Google؛ مسار داخلي فقط (منع التحويل الخارجي)
+  function target() {
+    let n: string | null | undefined = next;
+    try { n = n ?? window.localStorage.getItem('upap_next'); window.localStorage.removeItem('upap_next'); } catch { /* التخزين غير متاح */ }
+    return n && n.startsWith('/') && !n.startsWith('//') ? n : '/';
+  }
+
+  // بعد نجاح الدخول (بما فيه العودة من Google) ننتقل للوجهة؛ داخل صفحة أخرى تتولى هي التحديث
   useEffect(() => {
-    if (!sb) return;
-    sb.auth.getSession().then(({ data }) => { if (data.session) router.replace('/'); });
-    const { data: sub } = sb.auth.onAuthStateChange((_e, session) => { if (session) router.replace('/'); });
+    if (!sb || embedded) return;
+    sb.auth.getSession().then(({ data }) => { if (data.session) router.replace(target()); });
+    const { data: sub } = sb.auth.onAuthStateChange((_e, session) => { if (session) router.replace(target()); });
     return () => sub.subscription.unsubscribe();
-  }, [sb, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sb, router, embedded, next]);
 
   async function google() {
     if (!sb) return setMsg({ kind: 'err', text: t('auth.err.config') });
     setBusy(true); setMsg(null);
+    try { if (next) window.localStorage.setItem('upap_next', next); } catch { /* التخزين غير متاح */ }
     const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/login` } });
     if (error) { setMsg({ kind: 'err', text: t(authErrorKey(error.message)) }); setBusy(false); }
   }
@@ -58,11 +68,11 @@ export default function AuthPanel() {
   const input = 'w-full rounded-lg border border-[rgba(255,255,255,0.15)] bg-[rgba(2,6,23,0.8)] px-3 py-2.5 text-sm text-[#f1f5f9] outline-none focus:border-[#e0b45a]';
 
   return (
-    <div className="mx-auto w-full max-w-sm rounded-2xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.7)] p-6">
-      <h1 className="text-2xl font-bold">{t('auth.title')}</h1>
+    <div className={embedded ? 'w-full' : 'fx-rise fx-card mx-auto w-full max-w-sm p-6'}>
+      {embedded ? <h2 className="text-lg font-bold">{t('auth.title')}</h2> : <h1 className="text-2xl font-bold">{t('auth.title')}</h1>}
 
       <button onClick={google} disabled={busy || !sb}
-        className="mt-5 w-full rounded-lg bg-[#e0b45a] px-4 py-3 text-sm font-bold text-[#020617] disabled:opacity-50">
+        className="fx-glow fx-press mt-5 w-full rounded-lg bg-[#e0b45a] px-4 py-3 text-sm font-bold text-[#020617] disabled:opacity-50">
         {t('auth.google')}
       </button>
 
@@ -95,11 +105,11 @@ export default function AuthPanel() {
       )}
 
       {msg && (
-        <p role="status" className={`mt-4 rounded-lg px-3 py-2 text-sm leading-6 ${msg.kind === 'ok' ? 'bg-[rgba(16,185,129,0.15)] text-[#6ee7b7]' : 'bg-[rgba(239,68,68,0.15)] text-[#fca5a5]'}`}>{msg.text}</p>
+        <p role="status" className={`fx-pop mt-4 rounded-lg px-3 py-2 text-sm leading-6 ${msg.kind === 'ok' ? 'bg-[rgba(16,185,129,0.15)] text-[#6ee7b7]' : 'bg-[rgba(239,68,68,0.15)] text-[#fca5a5]'}`}>{msg.text}</p>
       )}
       {!sb && <p className="mt-4 text-sm text-[#fca5a5]">{t('auth.err.config')}</p>}
 
-      <Link href="/" className="mt-6 block text-center text-xs text-[#a5b4fc]">{t('auth.back')}</Link>
+      {!embedded && <Link href="/" className="mt-6 block text-center text-xs text-[#a5b4fc]">{t('auth.back')}</Link>}
     </div>
   );
 }

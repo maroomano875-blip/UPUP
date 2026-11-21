@@ -318,4 +318,9 @@ export const en: Dict = {
   "office.err.owner_cannot_leave": "The owner cannot leave the office.",
   "office.err.too_many_pending_invites": "You have 20 pending invites. Wait for them to expire or be used.",
   "office.err.generic": "Could not complete the action. Please try again shortly.",
+  "office.afterLogin": "After signing in you'll always find “My office” in the top badge. It's optional: individuals can carry on as they are.",
+  "office.signinTitle": "Sign in to manage your office",
+  "office.add": "Add a member",
+  "office.tip": "“My office” lives here inside: create or join an office and add your members.",
+  "office.tip.ok": "Got it",
 };

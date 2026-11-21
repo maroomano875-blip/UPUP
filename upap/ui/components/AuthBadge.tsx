@@ -12,6 +12,14 @@ export default function AuthBadge() {
   const sb = getBrowserSupabase();
   const [ready, setReady] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
+  const [tip, setTip] = useState(false);
+
+  // تنويه يظهر مرة واحدة لكل متصفح بعد الدخول: «مكتبي» موجودة بالداخل
+  useEffect(() => {
+    if (!email) { setTip(false); return; }
+    try { if (window.localStorage.getItem('upap_office_tip') !== '1') setTip(true); } catch { /* التخزين غير متاح */ }
+  }, [email]);
+  const closeTip = () => { setTip(false); try { window.localStorage.setItem('upap_office_tip', '1'); } catch { /* تجاهل */ } };
 
   useEffect(() => {
     if (!sb) return;
@@ -27,12 +35,21 @@ export default function AuthBadge() {
     <div className="fixed top-3 end-3 z-50 flex max-w-[70vw] items-center gap-2 rounded-full border border-[rgba(255,255,255,0.2)] bg-[rgba(2,6,23,0.92)] px-3 py-1.5 text-xs shadow-lg">
       {email ? (
         <>
-          <Link href="/office" className="shrink-0 font-semibold text-[#a5b4fc]">{t('office.nav')}</Link>
+          <Link href="/office" onClick={closeTip} className="relative shrink-0 font-semibold text-[#a5b4fc]">
+            {t('office.nav')}
+            {tip && <span aria-hidden className="fx-dot absolute -top-1 -end-2 h-2 w-2 rounded-full bg-[#e0b45a]" />}
+          </Link>
           <span className="truncate text-[#cbd5e1]" dir="ltr">{email}</span>
           <button onClick={() => sb.auth.signOut()} className="shrink-0 font-semibold text-[#e0b45a]">{t('auth.signout')}</button>
         </>
       ) : (
         <Link href="/login" className="font-semibold text-[#e0b45a]">{t('auth.signin')}</Link>
+      )}
+      {tip && email && (
+        <div role="note" className="fx-pop absolute end-0 top-full mt-2 w-64 rounded-xl border border-[rgba(224,180,90,0.4)] bg-[rgba(15,23,42,0.97)] p-3 text-start text-xs leading-6 text-[#e2e8f0] shadow-xl">
+          {t('office.tip')}
+          <button onClick={closeTip} className="fx-press mt-2 block font-semibold text-[#e0b45a]">{t('office.tip.ok')}</button>
+        </div>
       )}
     </div>
   );

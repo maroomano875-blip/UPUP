@@ -318,5 +318,10 @@ export const ar = {
   "office.err.owner_cannot_leave": "مالك المكتب لا يستطيع المغادرة.",
   "office.err.too_many_pending_invites": "لديك 20 دعوة معلّقة. انتظر انتهاءها أو استعمالها.",
   "office.err.generic": "تعذّر إكمال العملية. أعد المحاولة بعد قليل.",
+  "office.afterLogin": "بعد الدخول ستجد «مكتبي» دائماً في الشارة العلوية. وهو اختياري: الأفراد يكملون كما هم.",
+  "office.signinTitle": "ادخل لإدارة مكتبك",
+  "office.add": "إضافة عضو",
+  "office.tip": "قائمة «مكتبي» موجودة هنا بالداخل: أنشئ مكتباً أو انضم لمكتب، وأضف أعضاءك.",
+  "office.tip.ok": "فهمت",
 } as const;
 export type Dict = Record<keyof typeof ar, string>;
