@@ -273,7 +273,7 @@ export const en: Dict = {
   "auth.err.rate": "Too many attempts. Wait a moment and try again.",
   "auth.err.generic": "Could not complete the request. Try again shortly.",
   "auth.err.config": "Sign-in is not configured on this site yet.",
-  "auth.ok.confirm": "We sent a confirmation link to your email. Open it, then come back and sign in.",
+  "auth.ok.confirm": "If this email is new, we sent it a confirmation link; open it, then come back and sign in. If you already have an account, choose “Sign in”, or check your Spam folder.",
   "auth.back": "Back to home",
   "auth.required": "Document analysis is for signed-in users only. Tap “Sign in” at the top of the page, then try again.",
 };

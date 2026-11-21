@@ -273,7 +273,7 @@ export const fr: Dict = {
   "auth.err.rate": "Trop de tentatives. Patientez un instant puis réessayez.",
   "auth.err.generic": "Impossible de terminer l’opération. Réessayez dans un instant.",
   "auth.err.config": "La connexion n’est pas encore configurée sur ce site.",
-  "auth.ok.confirm": "Nous avons envoyé un lien de confirmation à votre e-mail. Ouvrez-le puis revenez vous connecter.",
+  "auth.ok.confirm": "Si cet e-mail est nouveau, nous lui avons envoyé un lien de confirmation ; ouvrez-le puis revenez vous connecter. Si vous avez déjà un compte, choisissez « Connexion », ou vérifiez vos courriers indésirables.",
   "auth.back": "Retour à l’accueil",
   "auth.required": "L’analyse de documents est réservée aux utilisateurs connectés. Appuyez sur « Se connecter » en haut de la page, puis réessayez.",
 };
