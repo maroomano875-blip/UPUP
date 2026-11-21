@@ -27,6 +27,7 @@ export default function AuthBadge() {
     <div className="fixed top-3 end-3 z-50 flex max-w-[70vw] items-center gap-2 rounded-full border border-[rgba(255,255,255,0.2)] bg-[rgba(2,6,23,0.92)] px-3 py-1.5 text-xs shadow-lg">
       {email ? (
         <>
+          <Link href="/office" className="shrink-0 font-semibold text-[#a5b4fc]">{t('office.nav')}</Link>
           <span className="truncate text-[#cbd5e1]" dir="ltr">{email}</span>
           <button onClick={() => sb.auth.signOut()} className="shrink-0 font-semibold text-[#e0b45a]">{t('auth.signout')}</button>
         </>
