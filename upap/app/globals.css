@@ -54,6 +54,9 @@ body {
 .fx-card { border: 1px solid rgba(255,255,255,.12); background: rgba(15,23,42,.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-radius: 1.25rem; box-shadow: 0 20px 50px -20px rgba(0,0,0,.6); }
 .fx-press { transition: transform .15s ease, opacity .15s ease; }
 .fx-press:active { transform: scale(.97); }
+/* طيّ بريد الشارة إلى أول حرف: انزلاق متوسط البطء */
+.fx-collapse { transition: max-width 1.3s cubic-bezier(.65,0,.35,1); }
 @media (prefers-reduced-motion: reduce) {
+  .fx-collapse { transition: none; }
   .fx-aurora::before, .fx-aurora::after, .fx-rise, .fx-pop, .fx-glow, .fx-dot { animation: none !important; }
 }

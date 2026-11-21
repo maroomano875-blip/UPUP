@@ -13,6 +13,13 @@ export default function AuthBadge() {
   const [ready, setReady] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
   const [tip, setTip] = useState(false);
+  // البريد يظهر كاملاً لحظة الدخول ثم ينطوي ببطء إلى أول حرف فقط؛ النقر عليه يفتحه ثم يطويه ثانية
+  const [open, setOpen] = useState(true);
+  useEffect(() => {
+    if (!email || !open) return;
+    const id = window.setTimeout(() => setOpen(false), open ? 2800 : 0);
+    return () => window.clearTimeout(id);
+  }, [email, open]);
 
   // تنويه يظهر مرة واحدة لكل متصفح بعد الدخول: «مكتبي» موجودة بالداخل
   useEffect(() => {
@@ -39,7 +46,11 @@ export default function AuthBadge() {
             {t('office.nav')}
             {tip && <span aria-hidden className="fx-dot absolute -top-1 -end-2 h-2 w-2 rounded-full bg-[#e0b45a]" />}
           </Link>
-          <span className="truncate text-[#cbd5e1]" dir="ltr">{email}</span>
+          <button type="button" onClick={() => setOpen((v) => !v)} aria-label={email} aria-expanded={open} title={email}
+            className="fx-collapse overflow-hidden whitespace-nowrap text-[#cbd5e1]" dir="ltr"
+            style={{ maxWidth: open ? '16rem' : '1.1em' }}>
+            <span className="font-bold text-[#e0b45a]">{email.charAt(0)}</span>{email.slice(1)}
+          </button>
           <button onClick={() => sb.auth.signOut()} className="shrink-0 font-semibold text-[#e0b45a]">{t('auth.signout')}</button>
         </>
       ) : (
