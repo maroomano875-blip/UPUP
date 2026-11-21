@@ -5,6 +5,7 @@ import { createAgent } from "../core/factory/createAgent";
 import { readUpload, UnreadableFileError } from "./readUpload";
 import type { AgentConfig } from "../core/types/agent";
 import { recordAnalysis } from "./analysisHistory";
+import { consumeQuota, refundQuota, cleanTimeZone } from "./quota";
 
 // معرّف العميل التجريبي الثابت. لا نقبل client_id من المتصفح (انتحال هوية)؛ يُستبدل بالمصادقة لاحقاً.
 const DEMO_CLIENT_ID = "00000000-0000-0000-0000-000000000001";
@@ -34,17 +35,34 @@ export function makeAgentRoute(config: AgentConfig, label: string) {
       let extractedText = read.text;
       if (notes) extractedText += "\n\n[ملاحظات المستخدم]\n" + notes;
 
-      const agent = await createAgent(config);
-      const result = await agent.run({
-        clientId: DEMO_CLIENT_ID,
-        country,
-        language,
-        extractedText,
-        imageBase64: read.imageBase64,
-        context: { file_name: file.name },
+      // حصة التجربة: تُستهلك بعد قراءة الملف وقبل استدعاء الذكاء الاصطناعي وتُسترجع إن فشل. الهوية من ترويسات وضعها middleware بعد التحقق.
+      const userId = req.headers.get("x-upap-uid");
+      const quota = await consumeQuota({
+        userId, email: req.headers.get("x-upap-email") ?? "", provider: req.headers.get("x-upap-provider") ?? "unknown",
+        tz: cleanTimeZone(formData.get("tz")), agent: label,
       });
+      if (!quota.ok) {
+        return NextResponse.json({ error: quota.code, code: quota.code, next_at: quota.nextAt }, { status: quota.status });
+      }
+
+      const agent = await createAgent(config);
+      let result;
+      try {
+        result = await agent.run({
+          clientId: DEMO_CLIENT_ID,
+          country,
+          language,
+          extractedText,
+          imageBase64: read.imageBase64,
+          context: { file_name: file.name },
+        });
+      } catch (e) {
+        await refundQuota(quota.eventId, userId);
+        throw e;
+      }
+      if (result.status === "failed") await refundQuota(quota.eventId, userId);
       // سجل الملخصات (30 يوماً): الهوية من ترويسة وضعها middleware بعد التحقق، لا من العميل
-      if (result.status !== "failed") await recordAnalysis({ userId: req.headers.get("x-upap-uid"), agentSlug: label, country, fileName: file.name, result });
+      if (result.status !== "failed") await recordAnalysis({ userId, agentSlug: label, country, fileName: file.name, result });
       return NextResponse.json(result);
     } catch (err) {
       // رسائل قراءة الملف مكتوبة للمستخدم عمداً؛ أي خطأ آخر داخلي فلا يُكشف تفصيله

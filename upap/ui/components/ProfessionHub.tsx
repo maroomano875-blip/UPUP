@@ -12,6 +12,8 @@ import { verifyInvoice } from '../../lib/verify';
 import { invoiceIssueText, curAdvisoryText, vatAdvisoryText } from '../../lib/i18n/format';
 import { useI18n } from './I18nProvider';
 import { getBrowserSupabase } from '../../lib/supabaseBrowser';
+import TrialStatus from './TrialStatus';
+import { quotaMessageKey } from '../../lib/quotaMessages';
 import { agentName, agentDesc, plannedName, profName } from '../../lib/i18n/catalog';
 import { countryName } from '../../lib/i18n/names';
 import { staticText } from '../../lib/i18n/catalog';
@@ -215,11 +217,21 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
       if (!token) throw new Error(t('auth.required'));
       const fd = new FormData();
       fd.append('file', f); fd.append('country', code); fd.append('language', lang); fd.append('notes', notes);
+      // المنطقة الزمنية لحساب «يوم» التجربة (تُثبَّت في الخادم عند أول استعمال)
+      try { fd.append('tz', Intl.DateTimeFormat().resolvedOptions().timeZone); } catch { /* يستعمل الخادم UTC */ }
       const r = await fetch(`/api/agents/${cur.slug}`, { method: 'POST', body: fd, signal: ctl.signal, headers: { Authorization: `Bearer ${token}` } });
       if (r.status === 401) throw new Error(t('auth.required'));
       const txt = await r.text();
       let d: Out; try { d = JSON.parse(txt); } catch { throw new Error(r.status === 413 ? t('hub.err.large') : t('hub.err.unexpected', { n: r.status })); }
-      if (!r.ok) throw new Error(d.error || t('hub.err.failed'));
+      if (!r.ok) {
+        const qk = quotaMessageKey((d as { code?: string }).code);
+        if (qk) {
+          const nx = (d as { next_at?: string }).next_at;
+          const time = nx ? new Date(nx).toLocaleString(lang, { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+          throw new Error(t(qk, { time }));
+        }
+        throw new Error(d.error || t('hub.err.failed'));
+      }
       setRes(d); setSt('done');
       const o: Out = d.output ?? {};
       if (isEmptyOut(o)) return;
@@ -254,6 +266,7 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
         ))}
       </div>
 
+      {tab === 'run' && <TrialStatus refreshKey={st} />}
       {tab === 'run' && (
         <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
           <div className="space-y-5">

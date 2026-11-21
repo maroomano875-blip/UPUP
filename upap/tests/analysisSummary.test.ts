@@ -24,7 +24,7 @@ test('buildSummary: مخرجات فارغة أو غير صالحة لا تكسر
 
 test('الهوية تأتي من ترويسة middleware فقط وتُحذف قيمة العميل', () => {
   const mw = readFileSync(join(__dirname, '..', 'middleware.ts'), 'utf8');
-  assert.match(mw, /fwd\.delete\('x-upap-uid'\)/);
+  assert.match(mw, /for \(const k of \['x-upap-uid', 'x-upap-email', 'x-upap-provider'\]\) fwd\.delete\(k\)/);
   const route = readFileSync(join(__dirname, '..', 'lib', 'agentRoute.ts'), 'utf8');
   assert.match(route, /req\.headers\.get\("x-upap-uid"\)/);
   assert.doesNotMatch(route, /formData\.get\("(user|office)/);

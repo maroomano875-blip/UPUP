@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { extractBearer, verifyAccessToken } from './lib/authGate';
+import { extractBearer, verifyAccessUser, type VerifiedUser } from './lib/authGate';
 
 // حدّ استخدام يحمي الحصة المجانية: لكل جهاز في الساعة + سقف يومي عام.
 // يعمل على POST /api/agents/* فقط. عند أي عطل في قاعدة البيانات يسمح بالطلب (fail-open).
@@ -14,10 +14,10 @@ async function sha(s: string): Promise<string> {
 }
 
 // نمرّر هوية المستخدم الموثَّقة للمسار عبر ترويسة داخلية؛ نحذف أي قيمة أرسلها العميل (منع الانتحال)
-function pass(req: NextRequest, userId: string | null) {
+function pass(req: NextRequest, user: VerifiedUser | null) {
   const fwd = new Headers(req.headers);
-  fwd.delete('x-upap-uid');
-  if (userId) fwd.set('x-upap-uid', userId);
+  for (const k of ['x-upap-uid', 'x-upap-email', 'x-upap-provider']) fwd.delete(k);
+  if (user) { fwd.set('x-upap-uid', user.id); fwd.set('x-upap-email', user.email); fwd.set('x-upap-provider', user.provider); }
   return NextResponse.next({ request: { headers: fwd } });
 }
 
@@ -28,15 +28,16 @@ export async function middleware(req: NextRequest) {
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   // بوابة الحساب: لا تحليل بلا مستخدم مسجَّل. تعطيلها طارئاً فقط بـ REQUIRE_LOGIN=off في Vercel.
-  let userId: string | null = null;
+  let user: VerifiedUser | null = null;
   if (process.env.REQUIRE_LOGIN !== 'off') {
     const token = extractBearer(req.headers.get('authorization'));
-    userId = base && anon && token ? await verifyAccessToken(base, anon, token) : null;
-    if (!userId) {
+    user = base && anon && token ? await verifyAccessUser(base, anon, token) : null;
+    if (!user) {
       return NextResponse.json({ error: 'auth_required', code: 'auth_required' }, { status: 401 });
     }
   }
-  if (!base || !key) return pass(req, userId);
+  const userId = user?.id ?? null;
+  if (!base || !key) return pass(req, user);
 
   const h: Record<string, string> = key.startsWith('eyJ') ? { apikey: key, Authorization: `Bearer ${key}` } : { apikey: key };
   const ip = (req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown').split(',')[0].trim();
@@ -72,5 +73,5 @@ export async function middleware(req: NextRequest) {
     // عطل في العدّاد: لا نمنع المستخدم، لكن نسجّل السبب في الجدول للفحص.
     try { await fetch(`${base}/rest/v1/rate_hits`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ key: 'err:' + String(e).slice(0, 100) }) }); } catch { /* تجاهل */ }
   }
-  return pass(req, userId);
+  return pass(req, user);
 }

@@ -43,3 +43,15 @@ export function authErrorKey(message: string | undefined | null): AuthErrKey {
   if (m.includes('rate limit') || m.includes('too many') || m.includes('security purposes')) return 'auth.err.rate';
   return 'auth.err.generic';
 }
+
+// مفتاح هوية للبريد: يوحّد الأسماء المستعارة لمنع تكرار التجربة (a.b+1@gmail.com ≡ ab@gmail.com).
+export function identityKey(raw: string): string {
+  const email = normalizeEmail(raw);
+  const at = email.lastIndexOf('@');
+  if (at < 1) return email;
+  let local = email.slice(0, at).split('+')[0];
+  let domain = email.slice(at + 1);
+  if (domain === 'googlemail.com') domain = 'gmail.com';
+  if (domain === 'gmail.com') local = local.replace(/\./g, '');
+  return `${local}@${domain}`;
+}

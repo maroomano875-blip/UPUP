@@ -334,4 +334,13 @@ export const fr: Dict = {
   "history.review": "Révision humaine requise",
   "history.mine": "Vous",
   "history.more": "Voir plus",
+  "quota.trial_ended": "Votre essai gratuit de 3 jours est terminé. Les abonnements arrivent bientôt.",
+  "quota.trial_daily_used": "Vous avez utilisé l'analyse du jour de l'essai. Elle se renouvelle {time} (votre heure).",
+  "quota.trial_already_used": "L'essai gratuit de cet e-mail a déjà été utilisé sur un autre compte.",
+  "quota.email_domain": "L'inscription par e-mail est limitée aux fournisseurs connus (Gmail, Outlook, Yahoo, iCloud). Utilisez Google ou l'un de ces e-mails.",
+  "quota.quota_unavailable": "Impossible de vérifier votre quota pour le moment. Réessayez bientôt.",
+  "trial.chip.active": "Essai gratuit : jour {day} sur 3 · {state}",
+  "trial.state.available": "analyse du jour disponible",
+  "trial.state.used": "analyse du jour utilisée, renouvelée {time}",
+  "trial.chip.ended": "Essai gratuit terminé",
 };

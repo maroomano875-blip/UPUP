@@ -334,5 +334,14 @@ export const ar = {
   "history.review": "يحتاج مراجعة بشرية",
   "history.mine": "أنت",
   "history.more": "عرض المزيد",
+  "quota.trial_ended": "انتهت تجربتك المجانية (3 أيام). الاشتراكات قريباً، وستجدها هنا عند إطلاقها.",
+  "quota.trial_daily_used": "استخدمت تحليل اليوم في التجربة المجانية. يتجدد {time} بتوقيتك.",
+  "quota.trial_already_used": "هذا البريد استُخدمت تجربته المجانية من قبل على حساب آخر.",
+  "quota.email_domain": "التسجيل بالبريد متاح من خدمات البريد المعروفة فقط (Gmail وOutlook وYahoo وiCloud). استخدم الدخول بـ Google أو بريداً من هذه الخدمات.",
+  "quota.quota_unavailable": "تعذّر التحقق من حصتك الآن. حاول بعد قليل.",
+  "trial.chip.active": "تجربة مجانية: اليوم {day} من 3 · {state}",
+  "trial.state.available": "تحليل اليوم متاح",
+  "trial.state.used": "استُخدم تحليل اليوم، يتجدد {time}",
+  "trial.chip.ended": "انتهت التجربة المجانية",
 } as const;
 export type Dict = Record<keyof typeof ar, string>;
