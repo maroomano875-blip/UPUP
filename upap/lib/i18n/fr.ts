@@ -275,4 +275,5 @@ export const fr: Dict = {
   "auth.err.config": "La connexion n’est pas encore configurée sur ce site.",
   "auth.ok.confirm": "Nous avons envoyé un lien de confirmation à votre e-mail. Ouvrez-le puis revenez vous connecter.",
   "auth.back": "Retour à l’accueil",
+  "auth.required": "L’analyse de documents est réservée aux utilisateurs connectés. Appuyez sur « Se connecter » en haut de la page, puis réessayez.",
 };

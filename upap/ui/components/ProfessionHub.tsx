@@ -11,6 +11,7 @@ import { vatAdvisory } from '../../lib/vatCheck';
 import { verifyInvoice } from '../../lib/verify';
 import { invoiceIssueText, curAdvisoryText, vatAdvisoryText } from '../../lib/i18n/format';
 import { useI18n } from './I18nProvider';
+import { getBrowserSupabase } from '../../lib/supabaseBrowser';
 import { agentName, agentDesc, plannedName, profName } from '../../lib/i18n/catalog';
 import { countryName } from '../../lib/i18n/names';
 import { staticText } from '../../lib/i18n/catalog';
@@ -208,9 +209,14 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
       const ck = await fileKey(f, `${cur.slug}|${code}|${lang}|${notes}`);
       const hit = cacheGet(ck);
       if (hit) { setBadge(t('hub.cached')); setRes(hit); setSt('done'); return; }
+      // بوابة الحساب: نرسل رمز الجلسة، ومن لا جلسة له لا يُرسَل طلبه أصلاً
+      const sb = getBrowserSupabase();
+      const token = sb ? (await sb.auth.getSession()).data.session?.access_token : undefined;
+      if (!token) throw new Error(t('auth.required'));
       const fd = new FormData();
       fd.append('file', f); fd.append('country', code); fd.append('language', lang); fd.append('notes', notes);
-      const r = await fetch(`/api/agents/${cur.slug}`, { method: 'POST', body: fd, signal: ctl.signal });
+      const r = await fetch(`/api/agents/${cur.slug}`, { method: 'POST', body: fd, signal: ctl.signal, headers: { Authorization: `Bearer ${token}` } });
+      if (r.status === 401) throw new Error(t('auth.required'));
       const txt = await r.text();
       let d: Out; try { d = JSON.parse(txt); } catch { throw new Error(r.status === 413 ? t('hub.err.large') : t('hub.err.unexpected', { n: r.status })); }
       if (!r.ok) throw new Error(d.error || t('hub.err.failed'));

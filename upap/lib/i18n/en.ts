@@ -275,4 +275,5 @@ export const en: Dict = {
   "auth.err.config": "Sign-in is not configured on this site yet.",
   "auth.ok.confirm": "We sent a confirmation link to your email. Open it, then come back and sign in.",
   "auth.back": "Back to home",
+  "auth.required": "Document analysis is for signed-in users only. Tap “Sign in” at the top of the page, then try again.",
 };

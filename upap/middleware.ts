@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { extractBearer, verifyAccessToken } from './lib/authGate';
 
 // حدّ استخدام يحمي الحصة المجانية: لكل جهاز في الساعة + سقف يومي عام.
 // يعمل على POST /api/agents/* فقط. عند أي عطل في قاعدة البيانات يسمح بالطلب (fail-open).
@@ -16,11 +17,23 @@ export async function middleware(req: NextRequest) {
   if (req.method !== 'POST') return NextResponse.next();
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // بوابة الحساب: لا تحليل بلا مستخدم مسجَّل. تعطيلها طارئاً فقط بـ REQUIRE_LOGIN=off في Vercel.
+  let userId: string | null = null;
+  if (process.env.REQUIRE_LOGIN !== 'off') {
+    const token = extractBearer(req.headers.get('authorization'));
+    userId = base && anon && token ? await verifyAccessToken(base, anon, token) : null;
+    if (!userId) {
+      return NextResponse.json({ error: 'auth_required', code: 'auth_required' }, { status: 401 });
+    }
+  }
   if (!base || !key) return NextResponse.next();
 
   const h: Record<string, string> = key.startsWith('eyJ') ? { apikey: key, Authorization: `Bearer ${key}` } : { apikey: key };
   const ip = (req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown').split(',')[0].trim();
-  const who = 'ip:' + (await sha(ip));
+  // الحد لكل حساب (أدق من الجهاز)، وللجهاز عند تعطيل البوابة
+  const who = userId ? 'u:' + (await sha(userId)) : 'ip:' + (await sha(ip));
   const hourAgo = new Date(Date.now() - 3600_000).toISOString();
   const dayAgo = new Date(Date.now() - 86_400_000).toISOString();
 

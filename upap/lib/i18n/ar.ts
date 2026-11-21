@@ -275,5 +275,6 @@ export const ar = {
   "auth.err.config": "خدمة الدخول غير مهيّأة على هذا الموقع بعد.",
   "auth.ok.confirm": "أرسلنا رابط التأكيد إلى بريدك. افتحه ثم ارجع للدخول.",
   "auth.back": "العودة للرئيسية",
+  "auth.required": "تحليل المستندات للمستخدمين المسجَّلين فقط. اضغط «تسجيل الدخول» أعلى الصفحة ثم أعد المحاولة.",
 } as const;
 export type Dict = Record<keyof typeof ar, string>;
