@@ -47,9 +47,10 @@ export default function AuthBadge() {
             {tip && <span aria-hidden className="fx-dot absolute -top-1 -end-2 h-2 w-2 rounded-full bg-[#e0b45a]" />}
           </Link>
           <button type="button" onClick={() => setOpen((v) => !v)} aria-label={email} aria-expanded={open} title={email}
-            className="fx-collapse overflow-hidden whitespace-nowrap text-[#cbd5e1]" dir="ltr"
-            style={{ maxWidth: open ? '16rem' : '1.1em' }}>
-            <span className="font-bold text-[#e0b45a]">{email.charAt(0)}</span>{email.slice(1)}
+            className="flex items-center whitespace-nowrap text-[#cbd5e1]" dir="ltr">
+            <span className="font-bold text-[#e0b45a]">{email.charAt(0)}</span>
+            {/* بقية البريد تنطوي إلى عرض صفر فلا يبقى منها أي حرف ظاهر */}
+            <span aria-hidden className="fx-collapse overflow-hidden" style={{ maxWidth: open ? '16rem' : '0px', opacity: open ? 1 : 0 }}>{email.slice(1)}</span>
           </button>
           <button onClick={() => sb.auth.signOut()} className="shrink-0 font-semibold text-[#e0b45a]">{t('auth.signout')}</button>
         </>
