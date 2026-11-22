@@ -33,6 +33,7 @@ declare
   caller text;
   raw text;
   code text;
+  lock_id uuid;
 begin
   if uid is null then raise exception 'auth_required'; end if;
   if p_role not in ('supervisor','member') then raise exception 'invalid_role'; end if;
@@ -40,7 +41,8 @@ begin
   if caller is null then raise exception 'not_in_office'; end if;
   if caller = 'member' then raise exception 'forbidden'; end if;
   if caller = 'supervisor' and p_role <> 'member' then raise exception 'forbidden'; end if;
-  perform 1 from offices where id = p_office for update;   -- تسلسل الطلبات المتزامنة
+  -- قفل صف المكتب لتسلسل الطلبات المتزامنة
+  select id into lock_id from offices where id = p_office for update;
   if (select count(*) from office_members where office_id = p_office)
      + (select count(*) from office_invites where office_id = p_office and used_at is null and expires_at > now())
      >= office_member_limit(p_office) then
@@ -61,6 +63,7 @@ declare
   uid uuid := auth.uid();
   raw text := upper(regexp_replace(coalesce(p_code, ''), '[^A-Za-z0-9]', '', 'g'));
   inv office_invites%rowtype;
+  lock_id uuid;
 begin
   if uid is null then raise exception 'auth_required'; end if;
   if char_length(raw) <> 16 then raise exception 'invalid_code'; end if;
@@ -69,7 +72,7 @@ begin
     where code_hash = encode(sha256(convert_to(raw, 'utf8')), 'hex')
     for update;
   if not found or inv.used_at is not null or inv.expires_at <= now() then raise exception 'invalid_code'; end if;
-  perform 1 from offices where id = inv.office_id for update;
+  select id into lock_id from offices where id = inv.office_id for update;
   if (select count(*) from office_members where office_id = inv.office_id) >= office_member_limit(inv.office_id) then
     raise exception 'member_limit';
   end if;
