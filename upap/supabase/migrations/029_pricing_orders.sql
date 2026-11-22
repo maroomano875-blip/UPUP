@@ -1,20 +1,16 @@
--- 029: prices, individual plan, user subscriptions, payment order creation
--- Additive only. No deletes. Safe to re-run.
+-- 029 pricing and orders (English only)
 
--- plan kind: office plans vs the individual plan
 alter table plans add column if not exists kind text not null default 'office';
 
 insert into plans (code, name, max_members, monthly_analyses, kind) values
   ('individual', 'Individual', 1, 60, 'individual')
 on conflict (code) do nothing;
 
--- approved prices in USDT (weekly, monthly, yearly = pay 9 months get 12)
 update plans set price_weekly_usdt = 3,  price_monthly_usdt = 8,  price_yearly_usdt = 72  where code = 'individual';
 update plans set price_weekly_usdt = 5,  price_monthly_usdt = 15, price_yearly_usdt = 135 where code = 'small';
 update plans set price_weekly_usdt = 9,  price_monthly_usdt = 29, price_yearly_usdt = 261 where code = 'medium';
 update plans set price_weekly_usdt = 19, price_monthly_usdt = 59, price_yearly_usdt = 531 where code = 'large';
 
--- subscriptions for individual users (no office)
 create table if not exists user_subscriptions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete restrict,
@@ -33,7 +29,6 @@ do $$ begin
   end if;
 end $$;
 
--- payment orders may belong to a user (individual) or an office
 alter table payment_orders alter column office_id drop not null;
 alter table payment_orders add column if not exists user_id uuid references auth.users(id) on delete restrict;
 do $$ begin
@@ -48,7 +43,6 @@ do $$ begin
   end if;
 end $$;
 
--- lock: an active individual subscriber cannot create or join an office
 create or replace function block_individual_in_office() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare n int;
@@ -63,7 +57,6 @@ create or replace trigger trg_block_individual_in_office
   before insert on office_members
   for each row execute function block_individual_in_office();
 
--- create a payment order with a unique amount (server only)
 create or replace function create_payment_order(p_user uuid, p_plan text, p_period text)
 returns table (order_id uuid, amount_usdt numeric, expires_at timestamptz)
 language plpgsql security definer set search_path = public as $$
@@ -94,7 +87,6 @@ begin
   select count(*) into recent from payment_orders o where o.user_id = p_user and o.created_at > now() - interval '1 hour';
   if recent >= 10 then raise exception 'too_many_orders'; end if;
 
-  -- free amounts of stale or superseded pending orders
   update payment_orders set status = 'expired' where status = 'pending' and (expires_at <= now() or user_id = p_user);
 
   loop
@@ -119,3 +111,7 @@ end $$;
 
 revoke all on function create_payment_order(uuid, text, text) from public, anon, authenticated;
 grant execute on function create_payment_order(uuid, text, text) to service_role;
+
+notify pgrst, 'reload schema';
+
+select code, kind, price_weekly_usdt, price_monthly_usdt, price_yearly_usdt from plans order by price_monthly_usdt;
