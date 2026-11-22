@@ -1,8 +1,3 @@
--- 028: حد أعضاء المكتب حسب الخطة (صارم) + حالة التجربة للإشعارات
--- إضافة/استبدال دوال فقط (create or replace)، بلا حذف ولا تعديل جداول.
--- القاعدة: مكتب بلا اشتراك فعّال = مالكه وحده (حد 1). المكتب المشترك: حد خطته.
--- الأعضاء الموجودون قبل التطبيق لا يُزالون؛ يُمنع فقط إضافة جدد فوق الحد.
-
 create or replace function office_member_limit(oid uuid) returns int
 language sql stable security definer set search_path = public as $$
   select coalesce((
@@ -11,7 +6,6 @@ language sql stable security definer set search_path = public as $$
   ), 1);
 $$;
 
--- أرقام الحد للعرض (لأعضاء المكتب فقط)
 create or replace function my_office_limits(p_office uuid) returns jsonb
 language plpgsql stable security definer set search_path = public as $$
 declare lim int; mem int; pend int;
@@ -25,7 +19,6 @@ begin
     'subscribed', exists (select 1 from office_subscriptions where office_id = p_office and status = 'active' and (expires_at is null or expires_at > now())));
 end $$;
 
--- دعوة: الأعضاء + الدعوات المعلّقة لا يتجاوزان الحد
 create or replace function create_invite(p_office uuid, p_role text default 'member') returns text
 language plpgsql security definer set search_path = public as $$
 declare
@@ -34,6 +27,9 @@ declare
   raw text;
   code text;
   lock_id uuid;
+  mem int;
+  pend int;
+  lim int;
 begin
   if uid is null then raise exception 'auth_required'; end if;
   if p_role not in ('supervisor','member') then raise exception 'invalid_role'; end if;
@@ -41,11 +37,11 @@ begin
   if caller is null then raise exception 'not_in_office'; end if;
   if caller = 'member' then raise exception 'forbidden'; end if;
   if caller = 'supervisor' and p_role <> 'member' then raise exception 'forbidden'; end if;
-  -- قفل صف المكتب لتسلسل الطلبات المتزامنة
   select id into lock_id from offices where id = p_office for update;
-  if (select count(*) from office_members where office_id = p_office)
-     + (select count(*) from office_invites where office_id = p_office and used_at is null and expires_at > now())
-     >= office_member_limit(p_office) then
+  select count(*) into mem from office_members where office_id = p_office;
+  select count(*) into pend from office_invites where office_id = p_office and used_at is null and expires_at > now();
+  lim := office_member_limit(p_office);
+  if mem + pend >= lim then
     raise exception 'member_limit';
   end if;
   raw := upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 16));
@@ -56,7 +52,6 @@ begin
   return code;
 end $$;
 
--- انضمام: يُرفض إن امتلأ المكتب (حتى لو كانت الدعوة صالحة)
 create or replace function join_office(p_code text) returns uuid
 language plpgsql security definer set search_path = public as $$
 declare
@@ -64,6 +59,8 @@ declare
   raw text := upper(regexp_replace(coalesce(p_code, ''), '[^A-Za-z0-9]', '', 'g'));
   inv office_invites%rowtype;
   lock_id uuid;
+  mem int;
+  lim int;
 begin
   if uid is null then raise exception 'auth_required'; end if;
   if char_length(raw) <> 16 then raise exception 'invalid_code'; end if;
@@ -73,7 +70,9 @@ begin
     for update;
   if not found or inv.used_at is not null or inv.expires_at <= now() then raise exception 'invalid_code'; end if;
   select id into lock_id from offices where id = inv.office_id for update;
-  if (select count(*) from office_members where office_id = inv.office_id) >= office_member_limit(inv.office_id) then
+  select count(*) into mem from office_members where office_id = inv.office_id;
+  lim := office_member_limit(inv.office_id);
+  if mem >= lim then
     raise exception 'member_limit';
   end if;
   insert into office_members (office_id, user_id, role) values (inv.office_id, uid, inv.role);
@@ -83,7 +82,6 @@ begin
   return inv.office_id;
 end $$;
 
--- حالة التجربة (للخادم): تُستعمل في /api/me وتُغذّي إشعارات الفرص الثلاث
 create or replace function trial_status_for(p_user uuid) returns jsonb
 language plpgsql stable security definer set search_path = public as $$
 declare

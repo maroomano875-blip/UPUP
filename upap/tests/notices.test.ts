@@ -22,7 +22,8 @@ test('028: حد الأعضاء صارم في الدعوة والانضمام (م
   assert.match(sql, /coalesce\(\(\s*select max\(p\.max_members\)[\s\S]*?\), 1\)/i);
   assert.equal((sql.match(/raise exception 'member_limit'/g) ?? []).length, 2);
   assert.equal((sql.match(/from offices where id = (p_office|inv\.office_id) for update/g) ?? []).length, 2);
-  assert.match(sql, /office_invites where office_id = p_office and used_at is null and expires_at > now\(\)\s*\)\s*>= office_member_limit/i);
+  assert.match(sql, /if mem \+ pend >= lim then\s*raise exception 'member_limit'/i);
+  assert.match(sql, /if mem >= lim then\s*raise exception 'member_limit'/i);
 });
 
 test('028: الاشتراك الفعّال فقط (status active وغير منتهٍ) يرفع الحد', () => {
