@@ -376,6 +376,7 @@ export const fr: Dict = {
   "office.limit.full.body": "Un bureau sans abonnement est réservé à son propriétaire. Abonnez-vous pour ajouter des membres.",
   "office.limit.upgrade": "Abonnements",
   "office.err.member_limit": "Le bureau a atteint la limite de membres de son forfait. Abonnez-vous ou changez de forfait.",
+  "office.err.individual_plan": "Ce compte a le forfait Individuel et ne peut pas créer ni rejoindre un bureau.",
   "toast.office.created": "Votre bureau est prêt",
   "toast.office.joined": "Vous avez rejoint le bureau",
   "toast.invite.ready": "Le code d'invitation est prêt",

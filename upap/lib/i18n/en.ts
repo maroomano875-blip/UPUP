@@ -376,6 +376,7 @@ export const en: Dict = {
   "office.limit.full.body": "An office without a subscription is for the owner only. Subscribe to add members.",
   "office.limit.upgrade": "Subscriptions",
   "office.err.member_limit": "The office reached its plan's member limit. Subscribe or upgrade to add more.",
+  "office.err.individual_plan": "This account has the Individual plan and cannot create or join an office.",
   "toast.office.created": "Your office is ready",
   "toast.office.joined": "You joined the office",
   "toast.invite.ready": "Invite code is ready",

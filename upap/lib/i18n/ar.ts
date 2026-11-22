@@ -376,6 +376,7 @@ export const ar = {
   "office.limit.full.body": "المكتب بلا اشتراك لمالكه وحده. اشترك لإضافة أعضاء.",
   "office.limit.upgrade": "الاشتراكات",
   "office.err.member_limit": "وصل المكتب حد الأعضاء المسموح لخطته. اشترك أو رقِّ الخطة لإضافة المزيد.",
+  "office.err.individual_plan": "هذا الحساب مشترك بالخطة الفردية، ولا يمكن إنشاء مكتب أو الانضمام إلى واحد.",
   "toast.office.created": "تم إنشاء مكتبك",
   "toast.office.joined": "انضممت إلى المكتب",
   "toast.invite.ready": "رمز الدعوة جاهز",
