@@ -1,7 +1,5 @@
--- 030: activate a paid order, billing audit, in-platform notifications, my_subscription
--- Additive only. No deletes. Safe to re-run.
+-- 030 activate payment (English only, no special characters)
 
--- billing audit log (mandatory: every money-related change is recorded)
 create table if not exists billing_audit (
   id bigint generated always as identity primary key,
   order_id uuid references payment_orders(id) on delete restrict,
@@ -12,9 +10,7 @@ create table if not exists billing_audit (
 );
 create index if not exists idx_billing_audit_order on billing_audit(order_id);
 alter table billing_audit enable row level security;
--- no policies: server (service role) only
 
--- in-platform notifications
 create table if not exists notifications (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -40,16 +36,15 @@ end $$;
 revoke all on function mark_notifications_read() from public, anon;
 grant execute on function mark_notifications_read() to authenticated;
 
--- activate a paid order exactly once (server only)
 create or replace function activate_payment(p_order uuid, p_tx text)
 returns table (already boolean, user_id uuid, plan_code text, period text, expires_at timestamptz)
 language plpgsql security definer set search_path = public as $$
 declare
   o payment_orders%rowtype;
-  starts timestamptz;
-  ends timestamptz;
-  cur timestamptz;
-  span interval;
+  v_start timestamptz;
+  v_end timestamptz;
+  v_cur timestamptz;
+  v_span interval;
 begin
   if p_tx is null or char_length(p_tx) < 8 then raise exception 'invalid_tx'; end if;
   select * into o from payment_orders where id = p_order for update;
@@ -58,48 +53,47 @@ begin
   if o.status = 'paid' then
     already := true; user_id := o.user_id; plan_code := o.plan_code; period := o.period;
     if o.office_id is not null then
-      select max(s.expires_at) into ends from office_subscriptions s where s.office_id = o.office_id;
+      select max(s.expires_at) into v_end from office_subscriptions s where s.office_id = o.office_id;
     else
-      select max(s.expires_at) into ends from user_subscriptions s where s.user_id = o.user_id;
+      select max(s.expires_at) into v_end from user_subscriptions s where s.user_id = o.user_id;
     end if;
-    expires_at := ends;
+    expires_at := v_end;
     return next;
     return;
   end if;
   if o.status <> 'pending' then raise exception 'order_not_pending'; end if;
 
-  span := case o.period when 'weekly' then interval '7 days' when 'monthly' then interval '1 month' else interval '1 year' end;
+  v_span := case o.period when 'weekly' then interval '7 days' when 'monthly' then interval '1 month' else interval '1 year' end;
 
   if o.office_id is not null then
-    select max(s.expires_at) into cur from office_subscriptions s
+    select max(s.expires_at) into v_cur from office_subscriptions s
       where s.office_id = o.office_id and s.plan_code = o.plan_code and s.status = 'active' and s.expires_at > now();
-    starts := greatest(now(), coalesce(cur, now()));
-    ends := starts + span;
+    v_start := greatest(now(), coalesce(v_cur, now()));
+    v_end := v_start + v_span;
     insert into office_subscriptions (office_id, plan_code, period, status, started_at, expires_at)
-      values (o.office_id, o.plan_code, o.period, 'active', starts, ends);
+      values (o.office_id, o.plan_code, o.period, 'active', v_start, v_end);
   else
-    select max(s.expires_at) into cur from user_subscriptions s
+    select max(s.expires_at) into v_cur from user_subscriptions s
       where s.user_id = o.user_id and s.plan_code = o.plan_code and s.status = 'active' and s.expires_at > now();
-    starts := greatest(now(), coalesce(cur, now()));
-    ends := starts + span;
+    v_start := greatest(now(), coalesce(v_cur, now()));
+    v_end := v_start + v_span;
     insert into user_subscriptions (user_id, plan_code, period, status, started_at, expires_at)
-      values (o.user_id, o.plan_code, o.period, 'active', starts, ends);
+      values (o.user_id, o.plan_code, o.period, 'active', v_start, v_end);
   end if;
 
   update payment_orders set status = 'paid', tx_id = p_tx, paid_at = now() where id = o.id;
   insert into billing_audit (order_id, user_id, action, meta)
     values (o.id, o.user_id, 'payment_activated',
-            jsonb_build_object('plan', o.plan_code, 'period', o.period, 'amount', o.amount_usdt, 'tx', p_tx, 'expires_at', ends));
+            jsonb_build_object('plan', o.plan_code, 'period', o.period, 'amount', o.amount_usdt, 'tx', p_tx, 'expires_at', v_end));
   insert into notifications (user_id, kind, meta)
-    values (o.user_id, 'subscribed', jsonb_build_object('plan', o.plan_code, 'period', o.period, 'expires_at', ends));
+    values (o.user_id, 'subscribed', jsonb_build_object('plan', o.plan_code, 'period', o.period, 'expires_at', v_end));
 
-  already := false; user_id := o.user_id; plan_code := o.plan_code; period := o.period; expires_at := ends;
+  already := false; user_id := o.user_id; plan_code := o.plan_code; period := o.period; expires_at := v_end;
   return next;
 end $$;
 revoke all on function activate_payment(uuid, text) from public, anon, authenticated;
 grant execute on function activate_payment(uuid, text) to service_role;
 
--- current subscription of the calling user (office plan first, then individual)
 create or replace function my_subscription() returns jsonb
 language plpgsql stable security definer set search_path = public as $$
 declare
