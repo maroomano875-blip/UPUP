@@ -124,6 +124,10 @@ export default function OfficePanel() {
 
   return (
     <div className="fx-rise fx-card p-5 sm:p-6">
+      <Link href="/" aria-label={t('office.back')} className="fx-press mb-3 inline-flex items-center gap-1 text-sm font-semibold text-[#a5b4fc]">
+        <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="rtl:rotate-180"><path d="M15 6l-6 6 6 6" /></svg>
+        {t('common.home')}
+      </Link>
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">{t('office.title')}</h1>
         {mine && <span className={chip}>{t(`office.role.${mine.role}` as never)}</span>}

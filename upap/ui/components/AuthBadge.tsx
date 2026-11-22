@@ -39,6 +39,11 @@ export default function AuthBadge() {
   if (!sb || !ready || pathname === '/login') return null;
 
   return (
+    <>
+    {/* زر الاشتراكات منفصل في الزاوية المقابلة (يختفي في صفحته نفسها) */}
+    {email && pathname !== '/subscribe' && (
+      <Link href="/subscribe" className="fx-press fixed top-3 start-3 z-50 rounded-full bg-[#e0b45a] px-3 py-1.5 text-xs font-bold text-[#0f172a] shadow-lg">{t('plans.title')}</Link>
+    )}
     <div className="fixed top-3 end-3 z-50 flex max-w-[70vw] items-center gap-2 rounded-full border border-[rgba(255,255,255,0.2)] bg-[rgba(2,6,23,0.92)] px-3 py-1.5 text-xs shadow-lg">
       {email ? (
         <>
@@ -46,8 +51,6 @@ export default function AuthBadge() {
             {t('office.nav')}
             {tip && <span aria-hidden className="fx-dot absolute -top-1 -end-2 h-2 w-2 rounded-full bg-[#e0b45a]" />}
           </Link>
-          {/* رابط الاشتراكات ظاهر دائماً للمسجَّلين */}
-          <Link href="/subscribe" className="shrink-0 rounded-full bg-[#e0b45a] px-2 py-0.5 font-bold text-[#0f172a]">{t('plans.title')}</Link>
           <button type="button" onClick={() => setOpen((v) => !v)} aria-label={email} aria-expanded={open} title={email}
             className="flex items-center whitespace-nowrap text-[#cbd5e1]" dir="ltr">
             <span className="font-bold text-[#e0b45a]">{email.charAt(0)}</span>
@@ -66,5 +69,6 @@ export default function AuthBadge() {
         </div>
       )}
     </div>
+    </>
   );
 }

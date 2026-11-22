@@ -23,6 +23,10 @@ export default function PlansView() {
 
   return (
     <div className="space-y-4">
+      <Link href="/" aria-label={t('office.back')} className="fx-press mb-3 inline-flex items-center gap-1 text-sm font-semibold text-[#a5b4fc]">
+        <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="rtl:rotate-180"><path d="M15 6l-6 6 6 6" /></svg>
+        {t('common.home')}
+      </Link>
       <div className="fx-rise text-center">
         <h1 className="text-3xl font-bold">{t('plans.title')}</h1>
         <p className="mt-2 text-sm leading-7 text-[#cbd5e1]">{t('plans.sub')}</p>
