@@ -364,6 +364,8 @@ export const ar = {
   "plans.trialNote": "التجربة المجانية: 3 فرص (فرصة كل يوم لمدة 3 أيام).",
   "plans.members": "حتى {n} أعضاء",
   "plans.analyses": "{n} تحليلاً شهرياً",
+  "plans.analyses.weekly": "{n} تحليلاً أسبوعياً",
+  "plans.analyses.yearly": "{n} تحليلاً شهرياً ({y} خلال السنة)",
   "plans.priceSoon": "السعر يُعلَن قريباً",
   "plans.cta": "الدفع بـ USDT قريباً",
   "plans.small": "الصغيرة",

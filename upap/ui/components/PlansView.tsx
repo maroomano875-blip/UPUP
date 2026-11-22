@@ -63,7 +63,7 @@ export default function PlansView() {
         {period === 'yearly' && price != null && <p className="mt-1 text-end text-xs text-[#6ee7b7]">{t('plans.perMonth', { n: perMonth(p) })}</p>}
         <ul className="mt-3 space-y-1 text-sm leading-7 text-[#e2e8f0]">
           <li>✓ {p.kind === 'individual' ? t('plans.solo') : t('plans.members', { n: p.max_members })}</li>
-          <li>✓ {t('plans.analyses', { n: p.monthly_analyses })}</li>
+          <li>✓ {period === 'weekly' ? t('plans.analyses.weekly', { n: Math.round(p.monthly_analyses / 4) }) : period === 'yearly' ? t('plans.analyses.yearly', { n: p.monthly_analyses, y: p.monthly_analyses * 12 }) : t('plans.analyses', { n: p.monthly_analyses })}</li>
         </ul>
         <button disabled={price == null || logged === false} onClick={() => setBuy(p)}
           className="fx-press mt-4 w-full rounded-lg bg-[#e0b45a] px-4 py-2.5 text-sm font-bold text-[#0f172a] disabled:opacity-40">

@@ -364,6 +364,8 @@ export const fr: Dict = {
   "plans.trialNote": "Essai gratuit : 3 essais (un par jour pendant 3 jours).",
   "plans.members": "Jusqu'à {n} membres",
   "plans.analyses": "{n} analyses / mois",
+  "plans.analyses.weekly": "{n} analyses par semaine",
+  "plans.analyses.yearly": "{n} analyses par mois ({y} sur l'année)",
   "plans.priceSoon": "Prix annoncé bientôt",
   "plans.cta": "Paiement USDT bientôt",
   "plans.small": "Petit",
