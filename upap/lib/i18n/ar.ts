@@ -370,6 +370,8 @@ export const ar = {
   "plans.medium": "المتوسطة",
   "plans.large": "الكبيرة",
   "plans.loading": "جارٍ تحميل الخطط…",
+  "plans.loadErr": "تعذّر تحميل الخطط الآن. حدّث الصفحة بعد قليل.",
+  "plans.empty": "لا توجد خطط متاحة حالياً.",
   "plans.individual": "فردي",
   "plans.popular": "الأكثر طلباً",
   "plans.perMonth": "≈ {n} USDT شهرياً",

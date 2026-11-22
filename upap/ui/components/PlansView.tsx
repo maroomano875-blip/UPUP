@@ -17,6 +17,7 @@ export default function PlansView() {
   const [buy, setBuy] = useState<Plan | null>(null);
   const [sub, setSub] = useState<Sub>(null);
   const [logged, setLogged] = useState<boolean | null>(null);
+  const [loadErr, setLoadErr] = useState(false);
 
   const loadSub = useCallback(() => {
     const sb = getBrowserSupabase();
@@ -28,7 +29,7 @@ export default function PlansView() {
     const sb = getBrowserSupabase();
     if (!sb) { setPlans([]); return; }
     sb.from('plans').select('code,name,max_members,monthly_analyses,price_weekly_usdt,price_monthly_usdt,price_yearly_usdt,kind')
-      .eq('is_active', true).order('price_monthly_usdt').then(({ data }) => setPlans((data as Plan[] | null) ?? []));
+      .eq('is_active', true).order('price_monthly_usdt').then(({ data, error }) => { if (error) { console.error('[plans]', error.message); setLoadErr(true); } setPlans((data as Plan[] | null) ?? []); });
     sb.auth.getSession().then(({ data }) => { setLogged(!!data.session); if (data.session) loadSub(); });
   }, [loadSub]);
 
@@ -90,6 +91,7 @@ export default function PlansView() {
       {period === 'yearly' && <p className="fx-pop text-center text-xs font-semibold text-[#6ee7b7]">{t('plans.yearlyDeal')}</p>}
 
       {plans === null && <div className="h-40 animate-pulse rounded-2xl bg-[rgba(255,255,255,0.06)]" aria-label={t('plans.loading')} />}
+      {plans !== null && plans.length === 0 && <p className="rounded-lg bg-[rgba(239,68,68,0.15)] px-3 py-2 text-center text-sm text-[#fca5a5]">{t(loadErr ? 'plans.loadErr' : 'plans.empty')}</p>}
       {group('individual').length > 0 && <h2 className="pt-2 text-sm font-bold text-[#a5b4fc]">{t('plans.groupSolo')}</h2>}
       {group('individual').map(card)}
       {group('office').length > 0 && <h2 className="pt-2 text-sm font-bold text-[#a5b4fc]">{t('plans.groupOffice')}</h2>}

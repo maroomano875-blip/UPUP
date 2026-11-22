@@ -370,6 +370,8 @@ export const fr: Dict = {
   "plans.medium": "Moyen",
   "plans.large": "Grand",
   "plans.loading": "Chargement des forfaits…",
+  "plans.loadErr": "Impossible de charger les forfaits. Actualisez bientôt.",
+  "plans.empty": "Aucun forfait disponible.",
   "plans.individual": "Individuel",
   "plans.popular": "Le plus demandé",
   "plans.perMonth": "≈ {n} USDT par mois",

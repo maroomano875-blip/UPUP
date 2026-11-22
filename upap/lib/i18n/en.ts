@@ -370,6 +370,8 @@ export const en: Dict = {
   "plans.medium": "Medium",
   "plans.large": "Large",
   "plans.loading": "Loading plans…",
+  "plans.loadErr": "Could not load the plans. Refresh shortly.",
+  "plans.empty": "No plans available right now.",
   "plans.individual": "Individual",
   "plans.popular": "Most popular",
   "plans.perMonth": "≈ {n} USDT per month",
