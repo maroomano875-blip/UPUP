@@ -46,6 +46,8 @@ export default function AuthBadge() {
             {t('office.nav')}
             {tip && <span aria-hidden className="fx-dot absolute -top-1 -end-2 h-2 w-2 rounded-full bg-[#e0b45a]" />}
           </Link>
+          {/* رابط الاشتراكات ظاهر دائماً للمسجَّلين */}
+          <Link href="/subscribe" className="shrink-0 rounded-full bg-[#e0b45a] px-2 py-0.5 font-bold text-[#0f172a]">{t('plans.title')}</Link>
           <button type="button" onClick={() => setOpen((v) => !v)} aria-label={email} aria-expanded={open} title={email}
             className="flex items-center whitespace-nowrap text-[#cbd5e1]" dir="ltr">
             <span className="font-bold text-[#e0b45a]">{email.charAt(0)}</span>
