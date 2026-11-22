@@ -40,9 +40,9 @@ export default function AuthBadge() {
 
   return (
     <>
-    {/* زر الاشتراكات منفصل في الزاوية المقابلة (يختفي في صفحته نفسها) */}
+    {/* زر الاشتراكات عائم أسفل الشاشة لا يتضارب مع سهم الرجوع (يختفي في صفحته نفسها) */}
     {email && pathname !== '/subscribe' && (
-      <Link href="/subscribe" className="fx-press fixed top-3 start-3 z-50 rounded-full bg-[#e0b45a] px-3 py-1.5 text-xs font-bold text-[#0f172a] shadow-lg">{t('plans.title')}</Link>
+      <Link href="/subscribe" className="fx-press fixed bottom-5 start-4 z-50 rounded-full bg-[#e0b45a] px-4 py-2.5 text-sm font-bold text-[#0f172a] shadow-[0_6px_20px_rgba(0,0,0,0.5)]">{t('plans.title')}</Link>
     )}
     <div className="fixed top-3 end-3 z-50 flex max-w-[70vw] items-center gap-2 rounded-full border border-[rgba(255,255,255,0.2)] bg-[rgba(2,6,23,0.92)] px-3 py-1.5 text-xs shadow-lg">
       {email ? (
