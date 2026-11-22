@@ -1,25 +1,66 @@
 'use client';
-// صفحة الاشتراكات: الخطط من قاعدة البيانات (قراءة عامة). الدفع بـ USDT يُضاف في المرحلة 5.
-import { useEffect, useState } from 'react';
+// صفحة الاشتراكات: الخطط من قاعدة البيانات، والشراء والدفع بـ USDT داخل الصفحة نفسها.
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useI18n } from './I18nProvider';
 import { getBrowserSupabase } from '../../lib/supabaseBrowser';
+import PayModal from './PayModal';
 
-type Plan = { code: string; name: string; max_members: number; monthly_analyses: number; price_weekly_usdt: number | null; price_monthly_usdt: number | null; price_yearly_usdt: number | null };
+type Plan = { code: string; name: string; max_members: number; monthly_analyses: number; price_weekly_usdt: number | null; price_monthly_usdt: number | null; price_yearly_usdt: number | null; kind: string };
+type Period = 'weekly' | 'monthly' | 'yearly';
+type Sub = { plan: string; period: string; expires_at: string; scope: string } | null;
 
 export default function PlansView() {
   const { t } = useI18n();
   const [plans, setPlans] = useState<Plan[] | null>(null);
+  const [period, setPeriod] = useState<Period>('monthly');
+  const [buy, setBuy] = useState<Plan | null>(null);
+  const [sub, setSub] = useState<Sub>(null);
+  const [logged, setLogged] = useState<boolean | null>(null);
+
+  const loadSub = useCallback(() => {
+    const sb = getBrowserSupabase();
+    if (!sb) return;
+    sb.rpc('my_subscription').then(({ data }) => setSub((data as Sub) ?? null));
+  }, []);
 
   useEffect(() => {
     const sb = getBrowserSupabase();
     if (!sb) { setPlans([]); return; }
-    sb.from('plans').select('code,name,max_members,monthly_analyses,price_weekly_usdt,price_monthly_usdt,price_yearly_usdt')
-      .eq('is_active', true).order('max_members').then(({ data }) => setPlans((data as Plan[] | null) ?? []));
-  }, []);
+    sb.from('plans').select('code,name,max_members,monthly_analyses,price_weekly_usdt,price_monthly_usdt,price_yearly_usdt,kind')
+      .eq('is_active', true).order('price_monthly_usdt').then(({ data }) => setPlans((data as Plan[] | null) ?? []));
+    sb.auth.getSession().then(({ data }) => { setLogged(!!data.session); if (data.session) loadSub(); });
+  }, [loadSub]);
 
-  const nameOf = (p: Plan) => (['small', 'medium', 'large'].includes(p.code) ? t(`plans.${p.code}` as never) : p.name);
-  const priceOf = (p: Plan) => (p.price_monthly_usdt != null ? `${p.price_monthly_usdt} USDT` : t('plans.priceSoon'));
+  const nameOf = (p: Plan) => (['individual', 'small', 'medium', 'large'].includes(p.code) ? t(`plans.${p.code}` as never) : p.name);
+  const priceOf = (p: Plan): number | null => (period === 'weekly' ? p.price_weekly_usdt : period === 'monthly' ? p.price_monthly_usdt : p.price_yearly_usdt);
+  const perMonth = (p: Plan) => (p.price_yearly_usdt != null ? (p.price_yearly_usdt / 12).toFixed(2).replace(/\.?0+$/, '') : '');
+  const group = (kind: string) => (plans ?? []).filter((p) => p.kind === kind);
+
+  const card = (p: Plan, i: number) => {
+    const price = priceOf(p);
+    const popular = p.code === 'medium';
+    return (
+      <div key={p.code} style={{ animationDelay: `${i * 120}ms` }} className={`fx-rise fx-card relative p-5 transition hover:-translate-y-1 ${popular ? 'border-[rgba(224,180,90,0.7)] shadow-[0_0_30px_-8px_rgba(224,180,90,0.5)]' : ''}`}>
+        {popular && <span className="absolute -top-3 start-5 rounded-full bg-[#e0b45a] px-3 py-0.5 text-xs font-bold text-[#0f172a]">{t('plans.popular')}</span>}
+        <div className="flex items-baseline justify-between gap-3">
+          <h3 className="text-xl font-bold text-[#e0b45a]">{nameOf(p)}</h3>
+          <span className="text-end" dir="ltr">
+            <span className="text-2xl font-bold">{price ?? '—'}</span> <span className="text-xs text-[#cbd5e1]">USDT</span>
+          </span>
+        </div>
+        {period === 'yearly' && price != null && <p className="mt-1 text-end text-xs text-[#6ee7b7]">{t('plans.perMonth', { n: perMonth(p) })}</p>}
+        <ul className="mt-3 space-y-1 text-sm leading-7 text-[#e2e8f0]">
+          <li>✓ {p.kind === 'individual' ? t('plans.solo') : t('plans.members', { n: p.max_members })}</li>
+          <li>✓ {t('plans.analyses', { n: p.monthly_analyses })}</li>
+        </ul>
+        <button disabled={price == null || logged === false} onClick={() => setBuy(p)}
+          className="fx-press mt-4 w-full rounded-lg bg-[#e0b45a] px-4 py-2.5 text-sm font-bold text-[#0f172a] disabled:opacity-40">
+          {logged === false ? t('plans.loginFirst') : t('plans.subscribe')}
+        </button>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -32,21 +73,31 @@ export default function PlansView() {
         <p className="mt-2 text-sm leading-7 text-[#cbd5e1]">{t('plans.sub')}</p>
         <p className="mt-1 text-xs text-[#e0b45a]">{t('plans.trialNote')}</p>
       </div>
-      {plans === null && <div className="h-40 animate-pulse rounded-2xl bg-[rgba(255,255,255,0.06)]" aria-label={t('plans.loading')} />}
-      {plans?.map((p, i) => (
-        <div key={p.code} style={{ animationDelay: `${i * 120}ms` }} className={`fx-rise fx-card p-5 transition hover:-translate-y-1 ${p.code === 'medium' ? 'border-[rgba(224,180,90,0.6)]' : ''}`}>
-          <div className="flex items-baseline justify-between gap-3">
-            <h2 className="text-xl font-bold text-[#e0b45a]">{nameOf(p)}</h2>
-            <span className="text-sm text-[#cbd5e1]">{priceOf(p)}</span>
-          </div>
-          <ul className="mt-3 space-y-1 text-sm leading-7 text-[#e2e8f0]">
-            <li>✓ {t('plans.members', { n: p.max_members })}</li>
-            <li>✓ {t('plans.analyses', { n: p.monthly_analyses })}</li>
-          </ul>
-          <button disabled className="mt-4 w-full rounded-lg border border-[rgba(255,255,255,0.2)] px-4 py-2.5 text-sm font-bold text-[#94a3b8]">{t('plans.cta')}</button>
+
+      {sub && (
+        <div className="fx-pop rounded-xl border border-[rgba(110,231,183,0.4)] bg-[rgba(16,185,129,0.1)] px-4 py-3 text-sm leading-7 text-[#6ee7b7]">
+          {t('plans.current', { plan: t(`plans.${sub.plan}` as never), d: new Date(sub.expires_at).toLocaleDateString() })}
         </div>
-      ))}
+      )}
+
+      <div className="flex gap-1 rounded-full border border-[rgba(255,255,255,0.15)] p-1 text-sm">
+        {(['weekly', 'monthly', 'yearly'] as Period[]).map((x) => (
+          <button key={x} onClick={() => setPeriod(x)} className={`fx-press flex-1 rounded-full px-2 py-2 font-bold transition ${period === x ? 'bg-[#e0b45a] text-[#0f172a]' : 'text-[#cbd5e1]'}`}>
+            {t(`plans.period.${x}` as never)}
+          </button>
+        ))}
+      </div>
+      {period === 'yearly' && <p className="fx-pop text-center text-xs font-semibold text-[#6ee7b7]">{t('plans.yearlyDeal')}</p>}
+
+      {plans === null && <div className="h-40 animate-pulse rounded-2xl bg-[rgba(255,255,255,0.06)]" aria-label={t('plans.loading')} />}
+      {group('individual').length > 0 && <h2 className="pt-2 text-sm font-bold text-[#a5b4fc]">{t('plans.groupSolo')}</h2>}
+      {group('individual').map(card)}
+      {group('office').length > 0 && <h2 className="pt-2 text-sm font-bold text-[#a5b4fc]">{t('plans.groupOffice')}</h2>}
+      {group('office').map(card)}
+      <p className="text-center text-xs leading-6 text-[#94a3b8]">{t('plans.officeLock')}</p>
       <Link href="/office" className="fx-press block text-center text-xs text-[#a5b4fc]">{t('office.nav')}</Link>
+
+      {buy && <PayModal plan={buy.code} period={period} planLabel={nameOf(buy)} onClose={() => setBuy(null)} onPaid={loadSub} />}
     </div>
   );
 }
