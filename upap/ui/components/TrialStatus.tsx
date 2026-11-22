@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useI18n } from './I18nProvider';
 import { getBrowserSupabase } from '../../lib/supabaseBrowser';
 
-type Status = { has_trial: boolean; day?: number; ended?: boolean; used_today?: boolean; next_at?: string };
+type Status = { has_trial: boolean; day?: number; finished?: boolean; used_today?: boolean; next_at?: string };
 
 export default function TrialStatus({ refreshKey }: { refreshKey: string }) {
   const { t, lang } = useI18n();
@@ -20,7 +20,7 @@ export default function TrialStatus({ refreshKey }: { refreshKey: string }) {
 
   if (!s?.has_trial) return null;
   const time = s.next_at ? new Date(s.next_at).toLocaleString(lang, { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : '';
-  const text = s.ended
+  const text = s.finished
     ? t('trial.chip.ended')
     : t('trial.chip.active', { day: Math.min(s.day ?? 1, 3), state: s.used_today ? t('trial.state.used', { time }) : t('trial.state.available') });
   return (

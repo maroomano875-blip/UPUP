@@ -6,16 +6,22 @@ import Link from 'next/link';
 import { useI18n } from './I18nProvider';
 import AuthPanel from './AuthPanel';
 import HistoryList from './HistoryList';
+import Burst from './Burst';
+import { useToast } from './ToastProvider';
 import { getBrowserSupabase } from '../../lib/supabaseBrowser';
 import { canInvite, canInviteRole, canRemove, formatInviteCode, officeErrorKey, type OfficeRole } from '../../lib/officePolicy';
 
 type Mine = { officeId: string; name: string; role: OfficeRole };
 type Member = { user_id: string; email: string; role: OfficeRole; joined_at: string };
 type Msg = { kind: 'ok' | 'err'; text: string } | null;
+type Limits = { limit: number; members: number; pending: number; subscribed: boolean };
 
 export default function OfficePanel() {
   const { t } = useI18n();
+  const { push } = useToast();
   const sb = getBrowserSupabase();
+  const [limits, setLimits] = useState<Limits | null>(null);
+  const [burst, setBurst] = useState(0);
   const [ready, setReady] = useState(false);
   const [uid, setUid] = useState<string | null>(null);
   const [mine, setMine] = useState<Mine | null>(null);
@@ -43,6 +49,8 @@ export default function OfficePanel() {
     const officeName = Array.isArray(off) ? off[0]?.name : off?.name;
     const m: Mine = { officeId: data.office_id as string, name: officeName ?? '', role: data.role as OfficeRole };
     setMine(m);
+    const { data: lim } = await sb.rpc('my_office_limits', { p_office: m.officeId });
+    setLimits((lim as Limits | null) ?? null);
     if (canInvite(m.role)) {
       const { data: list } = await sb.rpc('list_office_members', { p_office: m.officeId });
       setMembers((list as Member[] | null) ?? []);
@@ -62,8 +70,15 @@ export default function OfficePanel() {
   async function run(fn: () => PromiseLike<{ error: { message: string } | null }>, okKey?: string) {
     setBusy(true); setMsg(null);
     const { error } = await fn();
-    if (error) setMsg({ kind: 'err', text: t(officeErrorKey(error.message)) });
-    else { if (okKey) setMsg({ kind: 'ok', text: t(okKey as never) }); await load(); }
+    if (error) {
+      const key = officeErrorKey(error.message);
+      setMsg({ kind: 'err', text: t(key) });
+      if (key === 'office.err.member_limit') push({ kind: 'warn', title: t('office.err.member_limit'), action: { label: t('office.limit.upgrade'), href: '/subscribe' } });
+    } else {
+      if (okKey) { setMsg({ kind: 'ok', text: t(okKey as never) }); push({ kind: 'success', title: t((okKey === 'office.ok.created' ? 'toast.office.created' : okKey === 'office.ok.joined' ? 'toast.office.joined' : 'toast.removed') as never) }); }
+      if (okKey === 'office.ok.created' || okKey === 'office.ok.joined') setBurst((b) => b + 1);
+      await load();
+    }
     setBusy(false);
     return !error;
   }
@@ -86,14 +101,21 @@ export default function OfficePanel() {
     if (!sb || !mine) return;
     setBusy(true); setMsg(null); setFresh(null); setCopied(false);
     const { data, error } = await sb.rpc('create_invite', { p_office: mine.officeId, p_role: inviteRole });
-    if (error) setMsg({ kind: 'err', text: t(officeErrorKey(error.message)) });
-    else setFresh(String(data));
+    if (error) {
+      const key = officeErrorKey(error.message);
+      setMsg({ kind: 'err', text: t(key) });
+      if (key === 'office.err.member_limit') push({ kind: 'warn', title: t('office.err.member_limit'), action: { label: t('office.limit.upgrade'), href: '/subscribe' } });
+    } else {
+      setFresh(String(data)); setBurst((b) => b + 1);
+      push({ kind: 'success', title: t('toast.invite.ready'), body: t('toast.invite.ready.body') });
+      await load();
+    }
     setBusy(false);
   }
 
   async function copyCode() {
     if (!fresh) return;
-    try { await navigator.clipboard.writeText(fresh); setCopied(true); } catch { /* النسخ اليدوي متاح */ }
+    try { await navigator.clipboard.writeText(fresh); setCopied(true); push({ kind: 'info', title: t('toast.copied'), ttl: 2500 }); } catch { /* النسخ اليدوي متاح */ }
   }
 
   const input = 'w-full rounded-lg border border-[rgba(255,255,255,0.15)] bg-[rgba(2,6,23,0.8)] px-3 py-2.5 text-sm text-[#f1f5f9] outline-none transition focus:border-[#e0b45a]';
@@ -147,7 +169,25 @@ export default function OfficePanel() {
 
       {ready && mine && (
         <div className="mt-4 space-y-4">
-          <div className="text-lg font-bold text-[#e0b45a]">{mine.name}</div>
+          <div className="relative text-lg font-bold text-[#e0b45a]">{mine.name}<Burst show={burst} /></div>
+
+          {limits && (
+            <div>
+              <div className="flex items-center justify-between text-xs text-[#cbd5e1]">
+                <span>{t('office.limit.label', { m: limits.members, n: limits.limit })}{limits.pending > 0 ? ` ${t('office.limit.pending', { p: limits.pending })}` : ''}</span>
+                {limits.members + limits.pending >= limits.limit && <Link href="/subscribe" className="fx-press font-semibold text-[#e0b45a]">{t('office.limit.upgrade')}</Link>}
+              </div>
+              <div className="mt-1 h-2 overflow-hidden rounded-full bg-[rgba(255,255,255,0.08)]">
+                <div className={`fx-fill h-full rounded-full ${limits.members + limits.pending >= limits.limit ? 'bg-[#f59e0b]' : 'bg-[#6ee7b7]'}`}
+                  style={{ width: `${Math.min(100, Math.round(((limits.members + limits.pending) / Math.max(1, limits.limit)) * 100))}%` }} />
+              </div>
+              {limits.members + limits.pending >= limits.limit && !limits.subscribed && (
+                <p className="fx-pop mt-2 rounded-lg bg-[rgba(245,158,11,0.12)] px-3 py-2 text-xs leading-6 text-[#fcd34d]">
+                  <b>{t('office.limit.full.title', { n: limits.limit })}</b> {t('office.limit.full.body')}
+                </p>
+              )}
+            </div>
+          )}
 
           {canInvite(mine.role) && (
             <div>

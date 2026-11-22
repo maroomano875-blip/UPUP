@@ -5,7 +5,7 @@ export type OfficeRole = 'owner' | 'supervisor' | 'member';
 const KNOWN_ERRORS = [
   'auth_required', 'invalid_name', 'already_in_office', 'invalid_code', 'invalid_role',
   'not_in_office', 'forbidden', 'not_found', 'cannot_remove_owner', 'owner_cannot_leave',
-  'too_many_pending_invites',
+  'too_many_pending_invites', 'member_limit',
 ] as const;
 
 // أخطاء RPC تصل كنص يحوي الرمز؛ نطابقه ونعيد مفتاح ترجمة

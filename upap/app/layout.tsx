@@ -5,6 +5,8 @@ import { getLang } from "../lib/i18n/server";
 import { I18nProvider } from "../ui/components/I18nProvider";
 import UiLangSwitch from "../ui/components/UiLangSwitch";
 import AuthBadge from "../ui/components/AuthBadge";
+import { ToastProvider } from "../ui/components/ToastProvider";
+import TrialNotices from "../ui/components/TrialNotices";
 
 export async function generateMetadata(): Promise<Metadata> {
   const lang = await getLang();
@@ -17,9 +19,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang={lang} dir={dirOf(lang)}>
       <body>
         <I18nProvider lang={lang}>
-          {children}
-          <UiLangSwitch />
-          <AuthBadge />
+          <ToastProvider>
+            {children}
+            <UiLangSwitch />
+            <AuthBadge />
+            <TrialNotices />
+          </ToastProvider>
         </I18nProvider>
       </body>
     </html>

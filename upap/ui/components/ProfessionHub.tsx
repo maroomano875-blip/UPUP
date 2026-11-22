@@ -227,12 +227,15 @@ export default function ProfessionHub({ p, initialAgent }: { p: Profession; init
         const qk = quotaMessageKey((d as { code?: string }).code);
         if (qk) {
           const nx = (d as { next_at?: string }).next_at;
-          const time = nx ? new Date(nx).toLocaleString(lang, { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+          // نستعمل لغة الواجهة (ui) لا لغة الدولة المختارة، وإلا ظهرت «Mo.» بدل «الاثنين»
+          const time = nx ? new Date(nx).toLocaleString(ui, { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+          if ((d as { code?: string }).code === 'trial_ended') window.dispatchEvent(new Event('upap:trial-ended'));
           throw new Error(t(qk, { time }));
         }
         throw new Error(d.error || t('hub.err.failed'));
       }
       setRes(d); setSt('done');
+      window.dispatchEvent(new Event('upap:analysis-done'));
       const o: Out = d.output ?? {};
       if (isEmptyOut(o)) return;
       cacheSet(ck, d);
