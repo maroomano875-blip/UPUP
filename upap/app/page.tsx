@@ -3,6 +3,7 @@ import { PROFESSIONS, liveAgents } from '../data/catalog';
 import { COUNTRIES, VOLATILE, VERIFIED_COUNTRIES, isVerified, distinctLanguages } from '../data/countries';
 import { LAYERS } from '../data/layers';
 import { loadStats } from '../lib/stats';
+import SubscribeCta from '../ui/components/SubscribeCta';
 import AgentConsole from '../ui/components/AgentConsole';
 import { t, dirOf } from '../lib/i18n';
 import { getLang } from '../lib/i18n/server';
@@ -57,6 +58,7 @@ export default async function Home() {
             </div>
           ))}
         </section>
+        <SubscribeCta />
         <AgentConsole lang={lang} />
 
         <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
