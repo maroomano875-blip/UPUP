@@ -87,7 +87,7 @@ begin
   select count(*) into recent from payment_orders o where o.user_id = p_user and o.created_at > now() - interval '1 hour';
   if recent >= 10 then raise exception 'too_many_orders'; end if;
 
-  update payment_orders set status = 'expired' where status = 'pending' and (expires_at <= now() or user_id = p_user);
+  update payment_orders po set status = 'expired' where po.status = 'pending' and (po.expires_at <= now() or po.user_id = p_user);
 
   loop
     i := i + 1;
