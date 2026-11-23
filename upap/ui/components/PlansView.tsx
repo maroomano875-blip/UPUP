@@ -16,6 +16,7 @@ export default function PlansView() {
   const [period, setPeriod] = useState<Period>('monthly');
   const [buy, setBuy] = useState<Plan | null>(null);
   const [sub, setSub] = useState<Sub>(null);
+  const [actives, setActives] = useState<{ plan_code: string; period: string; expires_at: string }[]>([]);
   const [logged, setLogged] = useState<boolean | null>(null);
   const [loadErr, setLoadErr] = useState('');
 
@@ -23,6 +24,11 @@ export default function PlansView() {
     const sb = getBrowserSupabase();
     if (!sb) return;
     sb.rpc('my_subscription').then(({ data }) => setSub((data as Sub) ?? null));
+    // كل اشتراكاتي الفعّالة (فردية ومكتب): نقفل فقط الخطة والمدة المشترك بهما
+    const nowIso = new Date().toISOString();
+    Promise.all(['user_subscriptions', 'office_subscriptions'].map((tb) =>
+      sb.from(tb).select('plan_code,period,expires_at').eq('status', 'active').gt('expires_at', nowIso).then((r) => (r.data ?? []) as { plan_code: string; period: string; expires_at: string }[], () => [])
+    )).then((all) => setActives(all.flat()));
   }, []);
 
   useEffect(() => {
@@ -56,7 +62,8 @@ export default function PlansView() {
   const card = (p: Plan, i: number) => {
     const price = priceOf(p);
     const popular = p.code === 'medium';
-    const mine = !!sub && sub.plan === p.code;
+    const own = actives.filter((a) => a.plan_code === p.code && a.period === period).sort((a, b) => b.expires_at.localeCompare(a.expires_at))[0];
+    const mine = !!own;
     return (
       <div key={p.code} style={{ animationDelay: `${i * 120}ms` }} className={`fx-rise fx-card relative p-5 transition hover:-translate-y-1 ${popular ? 'border-[rgba(224,180,90,0.7)] shadow-[0_0_30px_-8px_rgba(224,180,90,0.5)]' : ''}`}>
         {popular && <span className="absolute -top-3 start-5 rounded-full bg-[#e0b45a] px-3 py-0.5 text-xs font-bold text-[#0f172a]">{t('plans.popular')}</span>}
@@ -73,7 +80,7 @@ export default function PlansView() {
         </ul>
         <button disabled={price == null || logged === false || mine} onClick={() => setBuy(p)}
           className={`fx-press mt-4 w-full rounded-lg px-4 py-2.5 text-sm font-bold disabled:opacity-60 ${mine ? 'bg-[rgba(16,185,129,0.2)] text-[#6ee7b7]' : 'bg-[#e0b45a] text-[#0f172a]'}`}>
-          {mine ? t('plans.active', { d: new Date(sub!.expires_at).toLocaleDateString() }) : logged === false ? t('plans.loginFirst') : t('plans.subscribe')}
+          {mine ? t('plans.active', { d: new Date(own!.expires_at).toLocaleDateString() }) : logged === false ? t('plans.loginFirst') : t('plans.subscribe')}
         </button>
       </div>
     );

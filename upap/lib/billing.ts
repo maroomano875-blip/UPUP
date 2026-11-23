@@ -58,13 +58,13 @@ export async function createOrder(userId: string, plan: string, period: string):
   const wallet = walletAddress();
   if (!wallet) throw new Error('wallet_missing');
   const db = getDB();
-  // لا يُباع اشتراك لخطة فعّالة لدى المستخدم؛ تُفتح من جديد بعد انتهاء مدتها
+  // لا يُباع نفس الخطة بنفس المدة وهي فعّالة؛ المدد الأخرى والخطط الأخرى تبقى مفتوحة
   const now = new Date().toISOString();
   const { data: mem } = await db.from('office_members').select('office_id').eq('user_id', userId).limit(1).maybeSingle();
   const officeId = (mem as { office_id: string } | null)?.office_id;
   const act = officeId
-    ? await db.from('office_subscriptions').select('id').eq('office_id', officeId).eq('plan_code', plan).eq('status', 'active').gt('expires_at', now).limit(1).maybeSingle()
-    : await db.from('user_subscriptions').select('id').eq('user_id', userId).eq('plan_code', plan).eq('status', 'active').gt('expires_at', now).limit(1).maybeSingle();
+    ? await db.from('office_subscriptions').select('id').eq('office_id', officeId).eq('plan_code', plan).eq('period', period).eq('status', 'active').gt('expires_at', now).limit(1).maybeSingle()
+    : await db.from('user_subscriptions').select('id').eq('user_id', userId).eq('plan_code', plan).eq('period', period).eq('status', 'active').gt('expires_at', now).limit(1).maybeSingle();
   if (act.data) throw new Error('already_subscribed');
   const { data: last } = await db.from('payment_orders').select('id').eq('user_id', userId).eq('status', 'pending')
     .order('created_at', { ascending: false }).limit(1).maybeSingle();
