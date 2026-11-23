@@ -405,6 +405,8 @@ export const fr: Dict = {
   "pay.err.wallet_missing": "Le paiement n'est pas encore activé.",
   "pay.err.tron_unavailable": "Réseau de paiement injoignable. Réessayez bientôt.",
   "pay.err.auth_required": "Connectez-vous d'abord.",
+  "pay.err.already_subscribed": "Vous avez déjà un abonnement actif à ce forfait. Vous pourrez le renouveler après son expiration.",
+  "plans.active": "Actif jusqu'au {d}",
   "pay.err.generic": "Impossible de créer la commande. Réessayez.",
   "office.limit.label": "Membres {m} sur {n}",
   "office.limit.pending": "({p} invitation(s) en attente)",

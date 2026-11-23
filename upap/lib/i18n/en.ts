@@ -405,6 +405,8 @@ export const en: Dict = {
   "pay.err.wallet_missing": "Payment is not enabled yet. Try later.",
   "pay.err.tron_unavailable": "Cannot reach the payment network right now. Try again shortly.",
   "pay.err.auth_required": "Sign in first.",
+  "pay.err.already_subscribed": "You already have an active subscription to this plan. You can renew it after it ends.",
+  "plans.active": "Active until {d}",
   "pay.err.generic": "Could not create the order. Try again.",
   "office.limit.label": "Members {m} of {n}",
   "office.limit.pending": "({p} pending invite(s))",

@@ -104,7 +104,7 @@ export default function PayModal({ plan, period, planLabel, onClose, onPaid }: P
 
         {err && (
           <div className="mt-4 space-y-3 text-sm leading-7">
-            <p className="rounded-lg bg-[rgba(239,68,68,0.15)] px-3 py-2 text-[#fca5a5]">{t(`pay.err.${['office_owner_required','in_office','too_many_orders','wallet_missing','tron_unavailable','auth_required'].includes(err) ? err : 'generic'}` as never)}</p>
+            <p className="rounded-lg bg-[rgba(239,68,68,0.15)] px-3 py-2 text-[#fca5a5]">{t(`pay.err.${['office_owner_required','in_office','too_many_orders','already_subscribed','wallet_missing','tron_unavailable','auth_required'].includes(err) ? err : 'generic'}` as never)}</p>
             {err === 'office_owner_required' && <Link href="/office" className="fx-press block text-center font-semibold text-[#a5b4fc]">{t('office.nav')}</Link>}
           </div>
         )}

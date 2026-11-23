@@ -16,7 +16,7 @@ export const walletAddress = () => {
 };
 
 // أخطاء قاعدة البيانات المعروفة تتحول لرموز قصيرة تعرضها الواجهة
-const KNOWN = ['invalid_plan', 'invalid_period', 'price_missing', 'office_owner_required', 'in_office', 'too_many_orders', 'amount_busy'];
+const KNOWN = ['invalid_plan', 'invalid_period', 'price_missing', 'office_owner_required', 'in_office', 'too_many_orders', 'amount_busy', 'already_subscribed'];
 export const orderErrorCode = (msg: string | undefined) => KNOWN.find((k) => (msg ?? '').includes(k)) ?? 'generic';
 
 async function audit(orderId: string | null, userId: string, action: string, meta: Record<string, unknown>) {
@@ -58,6 +58,14 @@ export async function createOrder(userId: string, plan: string, period: string):
   const wallet = walletAddress();
   if (!wallet) throw new Error('wallet_missing');
   const db = getDB();
+  // لا يُباع اشتراك لخطة فعّالة لدى المستخدم؛ تُفتح من جديد بعد انتهاء مدتها
+  const now = new Date().toISOString();
+  const { data: mem } = await db.from('office_members').select('office_id').eq('user_id', userId).limit(1).maybeSingle();
+  const officeId = (mem as { office_id: string } | null)?.office_id;
+  const act = officeId
+    ? await db.from('office_subscriptions').select('id').eq('office_id', officeId).eq('plan_code', plan).eq('status', 'active').gt('expires_at', now).limit(1).maybeSingle()
+    : await db.from('user_subscriptions').select('id').eq('user_id', userId).eq('plan_code', plan).eq('status', 'active').gt('expires_at', now).limit(1).maybeSingle();
+  if (act.data) throw new Error('already_subscribed');
   const { data: last } = await db.from('payment_orders').select('id').eq('user_id', userId).eq('status', 'pending')
     .order('created_at', { ascending: false }).limit(1).maybeSingle();
   if (last) {

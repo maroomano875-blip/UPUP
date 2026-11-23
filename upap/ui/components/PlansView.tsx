@@ -56,6 +56,7 @@ export default function PlansView() {
   const card = (p: Plan, i: number) => {
     const price = priceOf(p);
     const popular = p.code === 'medium';
+    const mine = !!sub && sub.plan === p.code;
     return (
       <div key={p.code} style={{ animationDelay: `${i * 120}ms` }} className={`fx-rise fx-card relative p-5 transition hover:-translate-y-1 ${popular ? 'border-[rgba(224,180,90,0.7)] shadow-[0_0_30px_-8px_rgba(224,180,90,0.5)]' : ''}`}>
         {popular && <span className="absolute -top-3 start-5 rounded-full bg-[#e0b45a] px-3 py-0.5 text-xs font-bold text-[#0f172a]">{t('plans.popular')}</span>}
@@ -70,9 +71,9 @@ export default function PlansView() {
           <li>✓ {p.kind === 'individual' ? t('plans.solo') : t('plans.members', { n: p.max_members })}</li>
           <li>✓ {period === 'weekly' ? t('plans.analyses.weekly', { n: Math.round(p.monthly_analyses / 4) }) : period === 'yearly' ? t('plans.analyses.yearly', { n: p.monthly_analyses, y: p.monthly_analyses * 12 }) : t('plans.analyses', { n: p.monthly_analyses })}</li>
         </ul>
-        <button disabled={price == null || logged === false} onClick={() => setBuy(p)}
-          className="fx-press mt-4 w-full rounded-lg bg-[#e0b45a] px-4 py-2.5 text-sm font-bold text-[#0f172a] disabled:opacity-40">
-          {logged === false ? t('plans.loginFirst') : t('plans.subscribe')}
+        <button disabled={price == null || logged === false || mine} onClick={() => setBuy(p)}
+          className={`fx-press mt-4 w-full rounded-lg px-4 py-2.5 text-sm font-bold disabled:opacity-60 ${mine ? 'bg-[rgba(16,185,129,0.2)] text-[#6ee7b7]' : 'bg-[#e0b45a] text-[#0f172a]'}`}>
+          {mine ? t('plans.active', { d: new Date(sub!.expires_at).toLocaleDateString() }) : logged === false ? t('plans.loginFirst') : t('plans.subscribe')}
         </button>
       </div>
     );

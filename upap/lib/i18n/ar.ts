@@ -405,6 +405,8 @@ export const ar = {
   "pay.err.wallet_missing": "الدفع غير مفعّل بعد. حاول لاحقاً.",
   "pay.err.tron_unavailable": "تعذّر الاتصال بشبكة الدفع الآن. حاول بعد قليل.",
   "pay.err.auth_required": "سجّل الدخول أولاً.",
+  "pay.err.already_subscribed": "لديك اشتراك فعّال في هذه الخطة. يمكنك تجديدها بعد انتهائه.",
+  "plans.active": "اشتراكك فعّال حتى {d}",
   "pay.err.generic": "تعذّر إنشاء الطلب. حاول مجدداً.",
   "office.limit.label": "الأعضاء {m} من {n}",
   "office.limit.pending": "({p} دعوة معلّقة)",
