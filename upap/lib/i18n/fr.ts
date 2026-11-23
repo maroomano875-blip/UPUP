@@ -394,6 +394,7 @@ export const fr: Dict = {
   "pay.tapCopy": "Appuyez pour copier",
   "pay.copied": "Copié ✓",
   "pay.network": "Réseau : TRON (TRC20) uniquement. Tout autre réseau perd les fonds.",
+  "pay.fee": "Important : ce montant exact doit arriver dans le portefeuille. Beaucoup de plateformes (ex. Binance) déduisent les frais du montant envoyé ; ajoutez-les pour que le montant reçu corresponde.",
   "pay.waiting": "En attente du paiement… temps restant",
   "pay.expired": "Cette commande a expiré. Si vous avez déjà envoyé le montant, contactez-nous ; sinon recommencez.",
   "pay.done.title": "Abonnement réussi 🎉",

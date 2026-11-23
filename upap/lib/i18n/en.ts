@@ -394,6 +394,7 @@ export const en: Dict = {
   "pay.tapCopy": "Tap to copy",
   "pay.copied": "Copied ✓",
   "pay.network": "Network: TRON (TRC20) only. Any other network loses the funds.",
+  "pay.fee": "Important: this exact amount must arrive in the wallet. Many exchanges (e.g. Binance) deduct the withdrawal fee from what you send, so add the fee on top so the received amount matches.",
   "pay.waiting": "Waiting for your payment… time left",
   "pay.expired": "This order expired. If you already sent the amount, contact us; otherwise start a new order.",
   "pay.done.title": "Subscribed successfully 🎉",

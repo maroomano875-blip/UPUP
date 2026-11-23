@@ -114,6 +114,7 @@ export default function PayModal({ plan, period, planLabel, onClose, onPaid }: P
               <span className="mt-1 block text-[#94a3b8]">{copied === 'address' ? t('pay.copied') : t('pay.tapCopy')}</span>
             </button>
             <p className="text-xs text-[#fca5a5]">{t('pay.network')}</p>
+            <p className="text-xs leading-6 text-[#e0b45a]">{t('pay.fee')}</p>
             <p className="text-sm text-[#cbd5e1]"><span className="fx-dot me-2 inline-block h-2 w-2 rounded-full bg-[#e0b45a]" />{t('pay.waiting')} <b dir="ltr" className="text-[#e0b45a]">{mm}:{ss}</b></p>
           </div>
         )}
