@@ -14,7 +14,7 @@ test('receipt mail has plan, period and date in each language', () => {
 
 test('mailer reports not_configured without keys', async () => {
   const keep = { ...process.env };
-  for (const k of ['BREVO_API_KEY', 'MAIL_FROM', 'GMAIL_USER', 'GMAIL_APP_PASSWORD']) delete process.env[k];
+  for (const k of ['BREVO_SMTP_USER', 'BREVO_SMTP_KEY', 'BREVO_API_KEY', 'MAIL_FROM', 'GMAIL_USER', 'GMAIL_APP_PASSWORD']) delete process.env[k];
   assert.equal(await sendMail({ to: 'a@b.co', subject: 's', text: 't', html: 'h' }), 'not_configured');
   Object.assign(process.env, keep);
 });

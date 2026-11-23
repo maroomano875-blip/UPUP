@@ -1,4 +1,4 @@
-// إرسال البريد: Brevo عبر واجهة HTTP إن وُجد مفتاحه، وإلا Gmail عبر SMTP (كلمة مرور تطبيق). خادم فقط.
+// إرسال البريد: Brevo عبر واجهة HTTP أو SMTP، وإلا Gmail عبر SMTP (كلمة مرور تطبيق). خادم فقط.
 import nodemailer from 'nodemailer';
 
 export type Mail = { to: string; subject: string; text: string; html: string };
@@ -17,6 +17,14 @@ export async function sendMail(m: Mail, f: typeof fetch = fetch): Promise<MailRe
         body: JSON.stringify({ sender: { email: from, name: 'UPAP' }, to: [{ email: m.to }], subject: m.subject, htmlContent: m.html, textContent: m.text }),
       });
       return r.ok ? 'sent' : 'failed';
+    }
+    // نفس بيانات SMTP لـ Brevo المستعملة في تأكيد التسجيل (لا حاجة لمفتاح API جديد)
+    const bu = clean(process.env.BREVO_SMTP_USER);
+    const bk = clean(process.env.BREVO_SMTP_KEY);
+    if (bu && bk && from) {
+      const tr = nodemailer.createTransport({ host: 'smtp-relay.brevo.com', port: 587, secure: false, auth: { user: bu, pass: bk } });
+      await tr.sendMail({ from: `UPAP <${from}>`, to: m.to, subject: m.subject, text: m.text, html: m.html });
+      return 'sent';
     }
     const user = clean(process.env.GMAIL_USER);
     const pass = clean(process.env.GMAIL_APP_PASSWORD).replace(/\s+/g, '');
