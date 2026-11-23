@@ -42,6 +42,11 @@ export default function PlansView() {
     })();
     sb.auth.getSession().then(({ data }) => { setLogged(!!data.session); if (data.session) loadSub(); });
   }, [loadSub]);
+  // عند وصول إشعار اشتراك من أي مكان نحدّث شريط الاشتراك الحالي
+  useEffect(() => {
+    window.addEventListener('upap:subscribed', loadSub);
+    return () => window.removeEventListener('upap:subscribed', loadSub);
+  }, [loadSub]);
 
   const nameOf = (p: Plan) => (['individual', 'small', 'medium', 'large'].includes(p.code) ? t(`plans.${p.code}` as never) : p.name);
   const priceOf = (p: Plan): number | null => (period === 'weekly' ? p.price_weekly_usdt : period === 'monthly' ? p.price_monthly_usdt : p.price_yearly_usdt);

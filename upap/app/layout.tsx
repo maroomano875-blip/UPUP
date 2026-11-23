@@ -7,6 +7,7 @@ import UiLangSwitch from "../ui/components/UiLangSwitch";
 import AuthBadge from "../ui/components/AuthBadge";
 import { ToastProvider } from "../ui/components/ToastProvider";
 import TrialNotices from "../ui/components/TrialNotices";
+import SubscriptionNotices from "../ui/components/SubscriptionNotices";
 
 export async function generateMetadata(): Promise<Metadata> {
   const lang = await getLang();
@@ -24,6 +25,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <UiLangSwitch />
             <AuthBadge />
             <TrialNotices />
+            <SubscriptionNotices />
           </ToastProvider>
         </I18nProvider>
       </body>
