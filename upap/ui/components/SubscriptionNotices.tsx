@@ -10,7 +10,7 @@ type Row = { id: string; kind: string; meta: { plan?: string; expires_at?: strin
 const EVERY_MS = 15000;
 
 export default function SubscriptionNotices() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { push } = useToast();
   const seen = useRef<Set<string>>(new Set());
   const busy = useRef(false);
@@ -33,9 +33,11 @@ export default function SubscriptionNotices() {
         push({ kind: 'success', title: t('pay.done.title'), body: [plan, d ? t('pay.done.body', { d }) : ''].filter(Boolean).join(' — '), ttl: 10000 });
       });
       window.dispatchEvent(new Event('upap:subscribed'));
+      // بريد التأكيد يُرسل من الخادم مرة واحدة لكل إشعار
+      fetch('/api/billing/email-receipt', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${s.session.access_token}` }, body: JSON.stringify({ ids: fresh.map((r) => r.id), lang }) }).catch(() => null);
       await sb.rpc('mark_notifications_read');
     } catch { /* الفشل لا يوقف الصفحة */ } finally { busy.current = false; }
-  }, [push, t]);
+  }, [push, t, lang]);
 
   useEffect(() => {
     void check();
