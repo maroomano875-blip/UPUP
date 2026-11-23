@@ -64,6 +64,13 @@ export async function createOrder(userId: string, plan: string, period: string):
     const st = await checkOrder(userId, (last as { id: string }).id).catch(() => null);
     if (st?.status === 'paid') return st;
   }
+  // إن كان للمستخدم طلب معلّق صالح لنفس الخطة والمدة نُعيده بدل إنشاء طلب جديد (يمنع تراكم الطلبات عند فتح النافذة مراراً)
+  const { data: same } = await db.from('payment_orders').select('id,amount_usdt,expires_at').eq('user_id', userId).eq('status', 'pending')
+    .eq('plan_code', plan).eq('period', period).gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false }).limit(1).maybeSingle();
+  if (same) {
+    const r = same as { id: string; amount_usdt: number | string; expires_at: string };
+    return { status: 'pending', orderId: r.id, amount: Number(r.amount_usdt), address: wallet, expiresAt: r.expires_at };
+  }
   const { data, error } = await db.rpc('create_payment_order', { p_user: userId, p_plan: plan, p_period: period });
   if (error) throw new Error(error.message);
   const r = Array.isArray(data) ? data[0] : null;
