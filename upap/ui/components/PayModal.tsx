@@ -75,7 +75,17 @@ export default function PayModal({ plan, period, planLabel, onClose, onPaid }: P
       else if (j.status === 'expired') setState('expired');
     };
     const id = window.setInterval(poll, POLL_MS);
-    return () => { stop = true; window.clearInterval(id); };
+    // المتصفح على الجوال يجمّد المؤقتات حين تغادر الصفحة؛ نفحص فوراً عند العودة إليها
+    const onBack = () => { if (document.visibilityState === 'visible') void poll(); };
+    document.addEventListener('visibilitychange', onBack);
+    window.addEventListener('focus', onBack);
+    window.addEventListener('pageshow', onBack);
+    return () => {
+      stop = true; window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onBack);
+      window.removeEventListener('focus', onBack);
+      window.removeEventListener('pageshow', onBack);
+    };
   }, [order, state, token, finish]);
 
   const copy = async (what: 'amount' | 'address', text: string) => {
