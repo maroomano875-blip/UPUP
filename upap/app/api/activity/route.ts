@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { hit, clientIp } from '../../../lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -7,6 +8,8 @@ export const fetchCache = 'force-no-store';
 
 // سجل الطلبات الأخيرة. قراءة آمنة: أي خطأ ← قائمة فارغة.
 export async function GET(req: Request) {
+  // حماية من الإغراق: 30 طلباً في الدقيقة لكل عنوان
+  if (!hit('act:' + clientIp(req), 30, 60_000)) return NextResponse.json({ connected: false, rows: [] }, { status: 429, headers: { 'Retry-After': '60' } });
   const slugs = (new URL(req.url).searchParams.get('agents') || '').split(',').filter(Boolean);
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
