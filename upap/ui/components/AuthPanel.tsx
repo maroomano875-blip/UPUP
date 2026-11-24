@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useI18n } from './I18nProvider';
+import GoogleButton, { GOOGLE_CLIENT_ID } from './GoogleButton';
 import { getBrowserSupabase } from '../../lib/supabaseBrowser';
 import { authErrorKey, isAllowedEmailDomain, normalizeEmail, passwordIssue } from '../../lib/authPolicy';
 
@@ -21,6 +22,8 @@ export default function AuthPanel({ embedded = false, next }: { embedded?: boole
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<Msg>(null);
+  // الزر المباشر يسقط إلى OAuth القديم إن لم يُضبط المعرّف أو تعذّر تحميل سكربت Google
+  const [directFailed, setDirectFailed] = useState(!GOOGLE_CLIENT_ID);
 
   // وجهة ما بعد الدخول: next أو ما حُفظ قبل الذهاب إلى Google؛ مسار داخلي فقط (منع التحويل الخارجي)
   function target() {
@@ -71,10 +74,14 @@ export default function AuthPanel({ embedded = false, next }: { embedded?: boole
     <div className={embedded ? 'w-full' : 'fx-rise fx-card mx-auto w-full max-w-sm p-6'}>
       {embedded ? <h2 className="text-lg font-bold">{t('auth.title')}</h2> : <h1 className="text-2xl font-bold">{t('auth.title')}</h1>}
 
-      <button onClick={google} disabled={busy || !sb}
-        className="fx-glow fx-press mt-5 w-full rounded-lg bg-[#e0b45a] px-4 py-3 text-sm font-bold text-[#020617] disabled:opacity-50">
-        {t('auth.google')}
-      </button>
+      {directFailed ? (
+        <button onClick={google} disabled={busy || !sb}
+          className="fx-glow fx-press mt-5 w-full rounded-lg bg-[#e0b45a] px-4 py-3 text-sm font-bold text-[#020617] disabled:opacity-50">
+          {t('auth.google')}
+        </button>
+      ) : (
+        <GoogleButton onError={(text) => setMsg({ kind: 'err', text })} onFail={() => setDirectFailed(true)} />
+      )}
 
       {emailOn && (
         <>
