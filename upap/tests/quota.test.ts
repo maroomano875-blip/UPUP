@@ -39,7 +39,7 @@ test('consumeQuota: التطبيق معطّل أو بلا هوية أو مستث
 });
 
 test('consumeQuota: نجاح، تحليل اليوم مستعمل، انتهاء التجربة', async () => {
-  assert.deepEqual(await consumeQuota(u, { enforce: true, db: fakeDb({ ok: true, event_id: 7 }) }), { ok: true, eventId: 7 });
+  assert.deepEqual(await consumeQuota(u, { enforce: true, db: fakeDb({ ok: true, event_id: 7 }) }), { ok: true, eventId: 7, kind: 'trial' });
   const daily = await consumeQuota(u, { enforce: true, db: fakeDb({ ok: false, reason: 'trial_daily_used', next_at: '2026-11-23T00:00:00+03:00' }) });
   assert.deepEqual(daily, { ok: false, status: 429, code: 'trial_daily_used', nextAt: '2026-11-23T00:00:00+03:00' });
   const ended = await consumeQuota(u, { enforce: true, db: fakeDb({ ok: false, reason: 'trial_ended' }) });
@@ -104,5 +104,5 @@ test('الاستهلاك يتم بعد قراءة الملف وقبل الذكا
   const r = readFileSync(join(__dirname, '..', 'lib', 'agentRoute.ts'), 'utf8');
   assert.ok(r.indexOf('readUpload(') < r.indexOf('consumeQuota('));
   assert.ok(r.indexOf('consumeQuota(') < r.indexOf('agent.run('));
-  assert.match(r, /refundQuota\(quota\.eventId, userId\)/);
+  assert.match(r, /refundQuota\(quota\.eventId, userId, undefined, quota\.kind\)/);
 });

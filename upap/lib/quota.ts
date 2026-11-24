@@ -4,7 +4,7 @@ import { getDB } from '../core/engine/db';
 import { identityKey, isAllowedEmailDomain } from './authPolicy';
 
 export type QuotaResult =
-  | { ok: true; eventId?: number }
+  | { ok: true; eventId?: number; kind?: 'plan' | 'trial' }
   | { ok: false; status: number; code: string; nextAt?: string };
 
 export const isExempt = (email: string, list: string | undefined = process.env.TRIAL_EXEMPT_EMAILS) =>
@@ -25,6 +25,20 @@ export async function consumeQuota(
   const enforce = opts.enforce ?? process.env.TRIAL_ENFORCE === 'on';
   if (!enforce || !u.userId) return { ok: true };
   if (isExempt(u.email)) return { ok: true };
+  // مشترك بخطة فعّالة: يُخصم من حصة خطته لا من التجربة (الأسبوعي = ربع الشهري، والشهري/السنوي = حد الشهر)
+  try {
+    const pdb = opts.db ?? (getDB() as unknown as RpcDb);
+    const { data: pd, error: pe } = await pdb.rpc('consume_plan', { p_user: u.userId, p_agent: u.agent });
+    if (pe) throw new Error(pe.message);
+    const pr = pd as { ok?: boolean; has_plan?: boolean; reason?: string; event_id?: number; next_at?: string };
+    if (pr?.has_plan === true) {
+      if (pr.ok) return { ok: true, eventId: pr.event_id, kind: 'plan' };
+      return { ok: false, status: 429, code: pr.reason ?? 'plan_quota_used', nextAt: pr.next_at };
+    }
+  } catch (e) {
+    console.error('[quota] تعذّر فحص حصة الخطة:', e instanceof Error ? e.message : e);
+    return { ok: false, status: 503, code: 'quota_unavailable' };
+  }
   // الدخول بالبريد يُقبل من النطاقات المعروفة فقط (Google مستثنى: هويته موثّقة عند مزوّدها)
   if (u.provider === 'email' && !isAllowedEmailDomain(u.email)) return { ok: false, status: 403, code: 'email_domain' };
   try {
@@ -34,7 +48,7 @@ export async function consumeQuota(
     });
     if (error) throw new Error(error.message);
     const r = data as { ok?: boolean; reason?: string; event_id?: number; next_at?: string };
-    if (r?.ok) return { ok: true, eventId: r.event_id };
+    if (r?.ok) return { ok: true, eventId: r.event_id, kind: 'trial' };
     const code = r?.reason ?? 'quota_unavailable';
     return { ok: false, status: code === 'trial_daily_used' ? 429 : 403, code, nextAt: r?.next_at };
   } catch (e) {
@@ -43,8 +57,8 @@ export async function consumeQuota(
   }
 }
 
-export async function refundQuota(eventId: number | undefined, userId: string | null, db?: RpcDb): Promise<void> {
+export async function refundQuota(eventId: number | undefined, userId: string | null, db?: RpcDb, kind: 'plan' | 'trial' = 'trial'): Promise<void> {
   if (!eventId || !userId) return;
-  try { await (db ?? (getDB() as unknown as RpcDb)).rpc('refund_trial', { p_event: eventId, p_user: userId }); }
+  try { await (db ?? (getDB() as unknown as RpcDb)).rpc(kind === 'plan' ? 'refund_plan' : 'refund_trial', { p_event: eventId, p_user: userId }); }
   catch (e) { console.error('[quota] تعذّر الاسترجاع:', e instanceof Error ? e.message : e); }
 }

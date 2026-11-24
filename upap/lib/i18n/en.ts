@@ -334,6 +334,8 @@ export const en: Dict = {
   "history.review": "Needs human review",
   "history.mine": "You",
   "history.more": "Show more",
+  "quota.plan_quota_used": "You've used your plan's analyses for this period. It renews {time} your time.",
+  "plan.chip": "Your plan: {plan} — {used} of {cap} analyses used. Resets {time}.",
   "quota.trial_ended": "Your 3-day free trial has ended. Subscriptions are coming soon.",
   "quota.trial_daily_used": "You've used today's free-trial analysis. It renews {time} your time.",
   "quota.trial_already_used": "This email's free trial was already used on another account.",

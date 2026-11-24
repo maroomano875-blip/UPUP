@@ -1,6 +1,7 @@
 // يحوّل رمز رفض الحصة القادم من الخادم إلى مفتاح ترجمة (أو null إن لم يكن رفض حصة)
 const MAP = {
   trial_ended: 'quota.trial_ended',
+  plan_quota_used: 'quota.plan_quota_used',
   trial_daily_used: 'quota.trial_daily_used',
   trial_already_used: 'quota.trial_already_used',
   email_domain: 'quota.email_domain',

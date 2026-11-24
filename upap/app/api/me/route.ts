@@ -17,6 +17,11 @@ export async function GET(req: NextRequest) {
   const exempt = isExempt(user.email);
   if (!enforce || exempt) return NextResponse.json({ enforce, exempt, trial: null }, { headers: { 'Cache-Control': 'no-store' } });
   try {
+    // مشترك بخطة فعّالة: لا إشعارات تجربة، ونرجع حالة استهلاك خطته
+    const { data: pl } = await getDB().rpc('plan_status_for', { p_user: user.id });
+    if ((pl as { has_plan?: boolean } | null)?.has_plan) return NextResponse.json({ enforce, exempt, trial: null, plan: pl }, { headers: { 'Cache-Control': 'no-store' } });
+  } catch { /* نكمل لحالة التجربة */ }
+  try {
     const { data, error } = await getDB().rpc('trial_status_for', { p_user: user.id });
     if (error) throw new Error(error.message);
     return NextResponse.json({ enforce, exempt, trial: data }, { headers: { 'Cache-Control': 'no-store' } });

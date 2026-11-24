@@ -57,10 +57,10 @@ export function makeAgentRoute(config: AgentConfig, label: string) {
           context: { file_name: file.name },
         });
       } catch (e) {
-        await refundQuota(quota.eventId, userId);
+        await refundQuota(quota.eventId, userId, undefined, quota.kind);
         throw e;
       }
-      if (result.status === "failed") await refundQuota(quota.eventId, userId);
+      if (result.status === "failed") await refundQuota(quota.eventId, userId, undefined, quota.kind);
       // سجل الملخصات (30 يوماً): الهوية من ترويسة وضعها middleware بعد التحقق، لا من العميل
       if (result.status !== "failed") await recordAnalysis({ userId, agentSlug: label, country, fileName: file.name, result });
       return NextResponse.json(result);
