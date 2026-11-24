@@ -4,7 +4,7 @@ import type { Lang } from './i18n';
 export type LegalKind = 'privacy' | 'terms' | 'refunds';
 export type LegalDoc = { title: string; updated: string; sections: { h: string; p: string[] }[] };
 export const LEGAL_UPDATED = '2026-11-24';
-export const contactEmail = () => (process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? '').trim();
+export const contactEmail = () => (process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? '').trim() || 'upapsupport@gmail.com';
 
 const AR: Record<LegalKind, LegalDoc> = {
   privacy: {
