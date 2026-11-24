@@ -15,7 +15,8 @@ export type AuditAction =
   | "subscription.activated"
   | "subscription.expired"
   | "payment.received"
-  | "analysis.saved";
+  | "analysis.saved"
+  | "summaries.purged";
 
 interface AuditEntry {
   actor_id?: string;        // client_id أو "system"
