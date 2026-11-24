@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useI18n } from './I18nProvider';
 import { getBrowserSupabase } from '../../lib/supabaseBrowser';
+import LegalLinks from './LegalLinks';
 import PayModal from './PayModal';
 
 type Plan = { code: string; name: string; max_members: number; monthly_analyses: number; price_weekly_usdt: number | null; price_monthly_usdt: number | null; price_yearly_usdt: number | null; kind: string };
@@ -121,6 +122,7 @@ export default function PlansView() {
       {group('office').map(card)}
       <p className="text-center text-xs leading-6 text-[#94a3b8]">{t('plans.officeLock')}</p>
       <Link href="/office" className="fx-press block text-center text-xs text-[#a5b4fc]">{t('office.nav')}</Link>
+      <LegalLinks agree />
 
       {buy && <PayModal plan={buy.code} period={period} planLabel={nameOf(buy)} onClose={() => setBuy(null)} onPaid={loadSub} />}
     </div>

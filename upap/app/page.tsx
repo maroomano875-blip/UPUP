@@ -3,6 +3,7 @@ import { PROFESSIONS, liveAgents } from '../data/catalog';
 import { COUNTRIES, VOLATILE, VERIFIED_COUNTRIES, isVerified, distinctLanguages } from '../data/countries';
 import { LAYERS } from '../data/layers';
 import { loadStats } from '../lib/stats';
+import LegalLinks from '../ui/components/LegalLinks';
 import SubscribeCta from '../ui/components/SubscribeCta';
 import AgentConsole from '../ui/components/AgentConsole';
 import { t, dirOf } from '../lib/i18n';
@@ -169,7 +170,7 @@ export default async function Home() {
           </div>
         </section>
       </div>
-      <footer className="border-t border-[rgba(255,255,255,0.1)] py-6 text-center text-xs text-[#64748b]">{T('home.footer')}</footer>
+      <footer className="space-y-3 border-t border-[rgba(255,255,255,0.1)] py-6 text-center text-xs text-[#64748b]">{T('home.footer')}<LegalLinks /></footer>
     </main>
   );
 }
