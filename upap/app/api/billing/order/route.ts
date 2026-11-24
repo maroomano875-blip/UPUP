@@ -2,6 +2,7 @@
 // الهوية دائماً من رمز الجلسة الموثَّق، لا من الجسم.
 import { NextRequest, NextResponse } from 'next/server';
 import { extractBearer, verifyAccessUser } from '../../../../lib/authGate';
+import { hit } from '../../../../lib/rateLimit';
 import { checkOrder, createOrder, orderErrorCode } from '../../../../lib/billing';
 
 export const dynamic = 'force-dynamic';
@@ -28,6 +29,7 @@ const fail = (e: unknown) => {
 export async function POST(req: NextRequest) {
   const user = await who(req);
   if (!user) return NextResponse.json({ error: 'auth_required' }, { status: 401, headers: H });
+  if (!hit('order:' + user.id, 10, 60_000)) return NextResponse.json({ error: 'rate_limited' }, { status: 429, headers: { ...H, 'Retry-After': '60' } });
   const body = (await req.json().catch(() => ({}))) as { plan?: unknown; period?: unknown };
   if (typeof body.plan !== 'string' || !PLANS.includes(body.plan) || typeof body.period !== 'string' || !PERIODS.includes(body.period)) {
     return NextResponse.json({ error: 'invalid_request' }, { status: 400, headers: H });
