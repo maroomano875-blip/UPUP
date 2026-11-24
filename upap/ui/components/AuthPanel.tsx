@@ -65,6 +65,17 @@ export default function AuthPanel({ embedded = false, next }: { embedded?: boole
     setBusy(false);
   }
 
+  // رابط إعادة تعيين كلمة المرور: ردّ موحّد دائماً (لا نكشف هل البريد مسجّل)
+  async function forgot() {
+    if (!sb) return setMsg({ kind: 'err', text: t('auth.err.config') });
+    const em = normalizeEmail(email);
+    if (!em) return setMsg({ kind: 'err', text: t('auth.err.needEmail') });
+    setBusy(true); setMsg(null);
+    const { error } = await sb.auth.resetPasswordForEmail(em, { redirectTo: `${window.location.origin}/reset-password` });
+    setMsg(error && /rate|security|seconds/i.test(error.message) ? { kind: 'err', text: t('auth.err.rate') } : { kind: 'ok', text: t('auth.ok.reset') });
+    setBusy(false);
+  }
+
   const input = 'w-full rounded-lg border border-[rgba(255,255,255,0.15)] bg-[rgba(2,6,23,0.8)] px-3 py-2.5 text-sm text-[#f1f5f9] outline-none focus:border-[#e0b45a]';
 
   return (
@@ -95,6 +106,9 @@ export default function AuthPanel({ embedded = false, next }: { embedded?: boole
             <input type="password" required autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} dir="ltr"
               value={password} onChange={(e) => setPassword(e.target.value)}
               placeholder={t('auth.password')} aria-label={t('auth.password')} className={input} />
+            {mode === 'signin' && (
+              <button type="button" onClick={forgot} disabled={busy || !sb} className="block text-xs text-[#a5b4fc] underline disabled:opacity-50">{t('auth.forgot')}</button>
+            )}
             {mode === 'signup' && <p className="text-xs leading-6 text-[#94a3b8]">{t('auth.hint.domain')} {t('auth.hint.password')}</p>}
             <button type="submit" disabled={busy || !sb}
               className="w-full rounded-lg border border-[rgba(255,255,255,0.2)] px-4 py-2.5 text-sm font-bold disabled:opacity-50">
