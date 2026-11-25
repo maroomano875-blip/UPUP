@@ -21,3 +21,12 @@ test('legal pages exist and use LegalPage', () => {
     assert.ok(src.includes(`kind="${kind}"`));
   }
 });
+
+test('forgot-password i18n keys exist in all languages', () => {
+  for (const l of langs) {
+    const src = readFileSync(join(root, 'lib/i18n', `${l}.ts`), 'utf8');
+    for (const k of ['auth.forgot', 'auth.ok.reset', 'auth.err.needEmail', 'reset.title', 'reset.new', 'reset.submit', 'reset.ok', 'reset.noSession', 'reset.toLogin']) {
+      assert.ok(src.includes(`"${k}"`), `${l} missing ${k}`);
+    }
+  }
+});
