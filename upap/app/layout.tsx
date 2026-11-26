@@ -3,7 +3,6 @@ import "./globals.css";
 import { dirOf, t } from "../lib/i18n";
 import { getLang } from "../lib/i18n/server";
 import { I18nProvider } from "../ui/components/I18nProvider";
-import UiLangSwitch from "../ui/components/UiLangSwitch";
 import AuthBadge from "../ui/components/AuthBadge";
 import { ToastProvider } from "../ui/components/ToastProvider";
 import TrialNotices from "../ui/components/TrialNotices";
@@ -22,7 +21,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <I18nProvider lang={lang}>
           <ToastProvider>
             {children}
-            <UiLangSwitch />
             <AuthBadge />
             <TrialNotices />
             <SubscriptionNotices />

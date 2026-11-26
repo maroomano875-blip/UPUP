@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { PROFESSIONS, liveAgents } from '../data/catalog';
-import { COUNTRIES, VOLATILE, VERIFIED_COUNTRIES, isVerified, distinctLanguages } from '../data/countries';
+import { COUNTRIES, VOLATILE, VERIFIED_COUNTRIES, isVerified } from '../data/countries';
 import { LAYERS } from '../data/layers';
 import { loadStats } from '../lib/stats';
 import LegalLinks from '../ui/components/LegalLinks';
@@ -52,13 +52,6 @@ export default async function Home() {
       </header>
 
       <div className="mx-auto max-w-6xl px-5 py-8 space-y-12">
-        <section className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-          {[[PROFESSIONS.length, T('home.big.prof')], [COUNTRIES.length, T('home.big.country')], [distinctLanguages(), T('home.big.lang')], ['$0', T('home.big.capital')]].map(([v, l]) => (
-            <div key={String(l)} className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.7)] py-4">
-              <div className="text-3xl font-bold text-[#e0b45a]">{v}</div><div className="text-xs text-[#cbd5e1] mt-1">{l}</div>
-            </div>
-          ))}
-        </section>
         <SubscribeCta />
         <AgentConsole lang={lang} />
 
