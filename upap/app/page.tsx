@@ -52,8 +52,8 @@ export default async function Home() {
       </header>
 
       <div className="mx-auto max-w-6xl px-5 py-8 space-y-12">
-        <SubscribeCta />
         <AgentConsole lang={lang} />
+        <SubscribeCta />
 
         <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {cards.map((c) => (
